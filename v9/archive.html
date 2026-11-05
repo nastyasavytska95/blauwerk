@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blauwerk × The Archive — v9</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #f7f8fb; --ink: #0b1433; --sub: #7a829c; --blue: #1f45e6; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .top { position: fixed; top: 28px; left: 0; right: 0; z-index: 10; display: flex; justify-content: center; align-items: center; gap: 14px; font-size: 15px; }
+  .top a { color: inherit; text-decoration: none; font-family: "Instrument Serif", Georgia, serif; font-size: 19px; }
+  .top i { font-style: normal; color: var(--sub); font-size: 12px; }
+  .top b { font-weight: 700; letter-spacing: -.03em; font-size: 17px; }
+  .back { position: fixed; top: 30px; left: 28px; z-index: 10; font-size: 13px; color: var(--sub); text-decoration: none; }
+  .back:hover { color: var(--ink); }
+  .count { position: fixed; top: 30px; right: 28px; z-index: 10; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .stage { position: fixed; inset: 0; cursor: grab; }
+  .stage.drag { cursor: grabbing; }
+  .ring { position: absolute; left: 50%; top: 44%; }
+  .item { position: absolute; left: 0; top: 0; width: 170px; margin-left: -85px; margin-top: -160px; cursor: pointer; will-change: transform; }
+  .item canvas { display: block; width: 100%; aspect-ratio: 512/712; box-shadow: 0 18px 40px -22px rgba(11,20,51,.4); transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  .item:hover canvas { transform: translateY(-8px); }
+  .item .cap { margin-top: 14px; font-size: 11px; line-height: 1.45; color: var(--sub); }
+  .item .cap em { display: block; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 17px; color: var(--ink); line-height: 1.1; margin-bottom: 4px; }
+  .foot { position: fixed; left: 50%; bottom: 5.5vh; transform: translateX(-50%); width: min(520px, 90vw); text-align: center; z-index: 10; }
+  .foot h1 { font-weight: 500; font-size: 15px; letter-spacing: -.01em; }
+  .foot p { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--sub); }
+  .ln-mask { display: block; overflow: clip; } .ln { display: block; }
+  /* lightbox */
+  .lb { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: auto 320px; gap: 56px; align-items: center; justify-content: center; background: rgba(247,248,251,.94); backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transition: opacity .45s; }
+  .lb.on { opacity: 1; pointer-events: auto; }
+  .lb canvas { height: min(74vh, 720px); width: auto; aspect-ratio: 512/712; box-shadow: 0 40px 80px -40px rgba(11,20,51,.5); transform: translateY(20px) scale(.96); transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  .lb.on canvas { transform: none; }
+  .lb .info em { display: block; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 44px; line-height: 1; }
+  .lb .info dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 18px; margin-top: 28px; font-size: 13px; }
+  .lb .info dt { color: var(--sub); }
+  .lb .info q { display: block; margin-top: 26px; font-size: 15px; line-height: 1.45; color: #384063; }
+  .lb .close { position: absolute; top: 28px; right: 28px; font: 400 13px Inter, sans-serif; background: none; border: 0; color: var(--sub); cursor: pointer; }
+  .ver { position: fixed; left: 16px; bottom: 16px; z-index: 99; font: 600 11px Inter, sans-serif; letter-spacing: .06em; padding: 6px 10px; border-radius: 999px; background: #0b1433; color: #fff; }
+  @media (max-width: 760px) { .lb { grid-template-columns: 1fr; gap: 20px; padding: 20px; } .lb canvas { height: 50vh; } .item { width: 140px; margin-left: -70px; margin-top: -130px; } }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Back to Blauwerk</a>
+<div class="top"><a href="index.html">Blauwerk</a><i>×</i><b>The Archive</b></div>
+<div class="count" id="count">001 / 030</div>
+<div class="stage" id="stage"><div class="ring" id="ring"></div></div>
+<div class="foot">
+  <h1><span class="ln-mask"><span class="ln">Edition 04 · 1,200 posters from 64 countries</span></span></h1>
+  <p><span class="ln-mask"><span class="ln">A first room of the full wall. Drag, scroll or use the arrow keys</span></span><span class="ln-mask"><span class="ln">to walk around — click any poster to look closer.</span></span></p>
+</div>
+<div class="lb" id="lb"><button class="close" id="lbClose">Close ✕</button><canvas id="lbCanvas"></canvas><div class="info" id="lbInfo"></div></div>
+<div class="ver">v9 · archive</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+/* ================= posters (blue palette) ================= */
+const NAVY = '#0a1a4a', COBALT = '#1f45e6', ICE = '#dfe7ff', SKY = '#6fa3ff', PAPER = '#f5f7fd', CYAN = '#38c6ff', DEEP = '#06102e';
+const designs = [
+  { bg: DEEP,   title: 'Deep\nField', style: 'orb' },
+  { bg: COBALT, title: 'Tide',        style: 'duo', duo: [NAVY, SKY] },
+  { bg: ICE,    title: 'Azul',        style: 'photoTop', duo: [NAVY, ICE] },
+  { bg: PAPER,  title: 'Blue\nHour',  style: 'circles' },
+  { bg: PAPER,  title: 'Quiet\nVoices\nCarry', style: 'editorial', duo: [COBALT, PAPER] },
+  { bg: COBALT, title: 'B',           style: 'bigLetter', duo: [NAVY, SKY] },
+  { bg: SKY,    title: 'Undertow',    style: 'waves' },
+  { bg: NAVY,   title: '',            style: 'photoFull', duo: [DEEP, SKY] },
+  { bg: NAVY,   title: 'Indigo',      style: 'duo', duo: [DEEP, COBALT] },
+  { bg: ICE,    title: 'Glass',       style: 'photoTop', duo: [COBALT, ICE] },
+  { bg: COBALT, title: '',            style: 'photoFull', duo: [NAVY, CYAN] },
+  { bg: DEEP,   title: 'Kobalt\n27',  style: 'orb' },
+  { bg: PAPER,  title: 'Wave\nForm',  style: 'waves' },
+  { bg: NAVY,   title: 'Ø',           style: 'bigLetter', duo: [DEEP, COBALT] },
+];
+const CW = 512, CH = 712;
+
+const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function duotone(ctx, x, y, w, h, dark, light) {
+  try {
+    const d = ctx.getImageData(x, y, w, h), a = hex(dark), b = hex(light), px = d.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const l = Math.pow((px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11) / 255, 1.1);
+      px[i] = a[0] + (b[0] - a[0]) * l; px[i + 1] = a[1] + (b[1] - a[1]) * l; px[i + 2] = a[2] + (b[2] - a[2]) * l;
+    }
+    ctx.putImageData(d, x, y);
+  } catch (e) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = light; ctx.fillRect(x, y, w, h); ctx.restore(); }
+}
+
+function drawPoster(ctx, d, img) {
+  ctx.save();
+  ctx.fillStyle = d.bg; ctx.fillRect(0, 0, CW, CH);
+  const photo = (x, y, w, h, duo) => {
+    if (!img) { const g = ctx.createLinearGradient(x, y, x, y + h); g.addColorStop(0, duo ? duo[1] : SKY); g.addColorStop(1, duo ? duo[0] : NAVY); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); return; }
+    const s = Math.max(w / img.width, h / img.height), iw = img.width * s, ih = img.height * s;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); ctx.restore();
+    if (duo) duotone(ctx, x, y, w, h, duo[0], duo[1]);
+  };
+  const small = (txt, x, y, col = '#fff', a = 'left') => { ctx.font = '600 13px Inter, sans-serif'; ctx.fillStyle = col; ctx.textAlign = a; ctx.fillText(txt, x, y); };
+  const lines = (txt, x, y, size, col, weight = 700, lh = .95) => {
+    ctx.font = `${weight} ${size}px Inter, sans-serif`; ctx.fillStyle = col; ctx.textAlign = 'left';
+    txt.split('\n').forEach((l, i) => ctx.fillText(l, x, y + i * size * lh));
+  };
+  const footer = col => { ctx.fillStyle = col; ctx.fillRect(36, CH - 40, CW - 72, 1.5); small('BLAUWERK 27', 36, CH - 16, col); small('№ ' + (100 + (d.title.length * 37) % 900), CW - 36, CH - 16, col, 'right'); };
+
+  switch (d.style) {
+    case 'orb': {
+      const g = ctx.createRadialGradient(CW * .5, CH * .42, 6, CW * .5, CH * .42, CW * .6);
+      g.addColorStop(0, '#d6f3ff'); g.addColorStop(.12, CYAN); g.addColorStop(.38, COBALT); g.addColorStop(.75, '#0b1a66'); g.addColorStop(1, DEEP);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+      ctx.strokeStyle = 'rgba(180,220,255,.35)'; ctx.lineWidth = 1;
+      for (let r = 60; r < 400; r += 34) { ctx.beginPath(); ctx.arc(CW * .5, CH * .42, r, 0, Math.PI * 2); ctx.stroke(); }
+      lines(d.title, 36, CH - 150, 74, '#fff', 600, .95);
+      small('EXHIBITION', 36, 50, '#cfe0ff');
+      footer('#cfe0ff');
+      break;
+    }
+    case 'duo':
+      photo(0, 0, CW, CH, d.duo);
+      lines(d.title, 30, CH - 70, 116, '#fff', 700, 1);
+      small('OPEN CALL 2027', 34, 48);
+      break;
+    case 'photoTop':
+      photo(0, 150, CW, CH - 150, d.duo);
+      lines(d.title, 30, 118, 104, NAVY, 600, 1);
+      small('ISSUE 04', CW - 30, 40, NAVY, 'right');
+      break;
+    case 'circles': {
+      const cols = [COBALT, SKY, NAVY, CYAN];
+      for (let i = 0; i < 9; i++) { ctx.fillStyle = cols[i % 4]; ctx.beginPath(); ctx.arc(110 + (i % 3) * 146, 110 + ((i / 3) | 0) * 146, 64, 0, Math.PI * (i % 2 ? 1 : 2)); ctx.fill(); }
+      lines(d.title, 36, CH - 170, 78, NAVY, 700, .95);
+      footer(NAVY);
+      break;
+    }
+    case 'editorial':
+      lines(d.title, 30, 92, 72, NAVY, 700, .98);
+      ctx.fillStyle = COBALT; ctx.fillRect(30, 420, 200, 200);
+      photo(250, 320, CW - 250, CH - 320, d.duo);
+      small('THE INTERVIEW', CW - 30, 40, NAVY, 'right');
+      break;
+    case 'bigLetter':
+      photo(CW * .4, 0, CW * .6, CH, d.duo);
+      ctx.font = '800 620px Inter, sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+      ctx.fillText(d.title, -30, CH - 70);
+      break;
+    case 'waves': {
+      const dark = d.bg === PAPER;
+      for (let k = 0; k < 16; k++) {
+        ctx.strokeStyle = dark ? (k % 3 ? COBALT : CYAN) : (k % 2 ? '#fff' : NAVY); ctx.lineWidth = 5;
+        ctx.beginPath();
+        for (let x = 0; x <= CW; x += 8) { const y = 70 + k * 30 + Math.sin(x / 50 + k * .5) * 18; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.stroke();
+      }
+      lines(d.title, 34, CH - 110, 70, dark ? NAVY : '#fff', 700, .95);
+      footer(dark ? NAVY : '#fff');
+      break;
+    }
+    case 'photoFull':
+      photo(0, 0, CW, CH, d.duo);
+      small('FIELD NOTES — LISBON', 30, 46);
+      break;
+  }
+  ctx.restore();
+}
+
+
+const imgs = [], waiters = designs.map(() => []);
+designs.forEach((d, i) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => { imgs[i] = img; waiters[i].forEach(f => f()); }; img.src = `https://picsum.photos/seed/blau${i * 11 + 5}/600/820?grayscale`; });
+function paint(cv, di) {
+  cv.width = CW; cv.height = CH;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const draw = () => drawPoster(ctx, designs[di], imgs[di] || null);
+  draw(); if (!imgs[di]) waiters[di].push(draw);
+  document.fonts && document.fonts.ready.then(draw);
+}
+
+const NAMES = ['Mira Okafor', 'Joon Park', 'Inês Duarte', 'Studio Halde', 'Oksana Hrytsenko', 'Felix Brandt', 'Ana Ruiz', 'Kenji Sato', 'Léa Moreau', 'Studio Vær', 'Tomás Vega', 'Nora Lind', 'Amara Eze', 'Yuki Tanabe', 'Rafael Couto', 'Ingrid Solberg', 'Diego Llano', 'Priya Raman'];
+const CITYS = ['Lagos', 'Busan', 'Lisbon', 'Oslo', 'Kyiv', 'Berlin', 'Mexico City', 'Tokyo', 'Lyon', 'Copenhagen', 'Bogotá', 'Bergen', 'Accra', 'Seoul', 'São Paulo', 'Reykjavík', 'Mumbai', 'Cairo'];
+const TECH = ['Screen print', 'Risograph', 'Offset', 'Letterpress', 'Cyanotype', 'Inkjet'];
+const TITLES = ['Deep Field', 'Tide', 'Azul', 'Blue Hour', 'Quiet Voices Carry', 'B', 'Undertow', 'Night Shift', 'Indigo', 'Glass', 'Low Tide', 'Kobalt 27', 'Wave Form', 'Ø', 'Open Window', 'Common Ground', 'Second Language', 'The Long Queue'];
+const DTITLES = ['Deep Field', 'Tide', 'Azul', 'Blue Hour', 'Quiet Voices Carry', 'B', 'Undertow', 'Field Notes', 'Indigo', 'Glass', 'Night Swim', 'Kobalt 27', 'Wave Form', 'Ø'];
+const N = 30, STEP = 360 / N;
+const items = Array.from({ length: N }, (_, i) => {
+  const d = (i * 5 + (i / 7 | 0)) % designs.length;
+  const data = { d, t: DTITLES[d], by: NAMES[(i * 7) % NAMES.length], city: CITYS[(i * 5) % CITYS.length], y: 2025 + (i % 2), tech: TECH[i % TECH.length], n: i + 1 };
+  const el = document.createElement('div'); el.className = 'item';
+  el.innerHTML = `<canvas></canvas><div class="cap"><em>${data.t}</em>${data.by}<br>${data.city}, ${data.y}<br>${data.tech}</div>`;
+  document.getElementById('ring').appendChild(el);
+  el.addEventListener('click', () => { if (!moved && !lbOpen) openLb(data); });
+  paint(el.querySelector('canvas'), d);
+  return { el, data, a: i * STEP, k: 0 };
+});
+
+/* rotation: wheel / drag / keys, with inertia and a slow drift */
+let rot = 0, target = 0, dragging = false, lastX = 0, downX = 0, moved = false, vel = 0;
+const stage = document.getElementById('stage');
+addEventListener('wheel', e => { target -= (e.deltaY + e.deltaX) * .05; }, { passive: true });
+stage.addEventListener('pointerdown', e => { dragging = true; moved = false; lastX = downX = e.clientX; stage.classList.add('drag'); });
+addEventListener('pointermove', e => { if (!dragging) return; const dx = e.clientX - lastX; lastX = e.clientX; if (Math.abs(e.clientX - downX) > 8) moved = true; target += dx * .12; vel = dx * .12; });
+addEventListener('pointerup', () => { dragging = false; stage.classList.remove('drag'); target += vel * 6; vel = 0; setTimeout(() => moved = false, 0); });
+addEventListener('keydown', e => { if (e.key === 'ArrowRight') target -= STEP; if (e.key === 'ArrowLeft') target += STEP; if (e.key === 'Escape') closeLb(); });
+
+const intro = { k: 0 };
+gsap.to(intro, { k: 1, duration: 2.4, ease: 'power3.out', delay: .2 });
+gsap.fromTo('.ln', { yPercent: 110 }, { yPercent: 0, duration: 1.2, stagger: .08, ease: 'power4.out', delay: .6 });
+const ring = document.getElementById('ring'), countEl = document.getElementById('count');
+function tick() {
+  if (!dragging && !lbOpen) target -= .015;
+  rot = lerp(rot, target, .08);
+  const K = Math.min(1000, innerWidth * .7);   // recomputed every frame so resizing just works
+  let best = 0, bestD = 1e9;
+  items.forEach((it, i) => {
+    let a = ((it.a + rot) % 360 + 540) % 360 - 180;        // -180..180, 0 = straight ahead
+    const vis = Math.abs(a) < 42;
+    it.el.style.visibility = vis ? 'visible' : 'hidden';
+    if (!vis) return;
+    const k = clamp(intro.k * 1.6 - Math.abs(a) / 42 * .6);
+    const enter = (1 - k) * 40 * Math.sign(a || 1);
+    // panoramic projection: as if hung on the inside of a cylinder around the viewer
+    const ar = (a + enter) * Math.PI / 180, sc = 1 / Math.cos(ar);
+    it.el.style.transform = `translateX(${K * Math.tan(ar)}px) scale(${sc}) perspective(1100px) rotateY(${-(a + enter)}deg)`;
+    it.el.style.zIndex = Math.round(Math.abs(a));
+    it.el.style.opacity = k * clamp((42 - Math.abs(a)) / 10);
+    if (Math.abs(a) < bestD) { bestD = Math.abs(a); best = i; }
+  });
+  countEl.textContent = `${String(best + 1).padStart(3, '0')} / ${String(N).padStart(3, '0')}`;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* lightbox */
+const lb = document.getElementById('lb'); let lbOpen = false;
+function openLb(d) {
+  paint(document.getElementById('lbCanvas'), d.d);
+  document.getElementById('lbInfo').innerHTML = `<em>${d.t}</em><dl><dt>Designer</dt><dd>${d.by}</dd><dt>City</dt><dd>${d.city}</dd><dt>Year</dt><dd>${d.y}</dd><dt>Print</dt><dd>${d.tech}</dd><dt>Wall №</dt><dd>${String(d.n).padStart(4, '0')}</dd></dl><q>A poster has three seconds to stop a stranger. This one was printed for exactly that.</q>`;
+  lb.classList.add('on'); lbOpen = true;
+}
+function closeLb() { lb.classList.remove('on'); lbOpen = false; }
+lb.addEventListener('click', e => { if (e.target === lb || e.target.id === 'lbClose') closeLb(); });
+</script>
+</body>
+</html>

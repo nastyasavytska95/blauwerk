@@ -1,0 +1,1670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blauwerk 2027 — v7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* v3 — v1 typography + blue palette · sphere → helix → wall · manifesto / rooms / featured */
+  :root {
+    --bg: #eef1f8;
+    --ink: #0b1433;
+    --blue: #1f45e6;
+    --muted: #6a7392;
+    --line: #d5dbeb;
+    --pad: max(32px, calc((100vw - 1280px)/2 + 24px));
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+  a { color: inherit; }
+
+  /* ---------- nav (v1 style) ---------- */
+  .nav {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+    width: min(1280px, calc(100% - 64px)); height: 52px; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 8px 0 18px; border-radius: 14px;
+    background: rgba(255,255,255,.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    font-size: 13px; transition: opacity .5s, transform .5s;
+  }
+  .nav.hide { opacity: 0; transform: translate(-50%, -12px); pointer-events: none; }
+  .logo { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 15px; letter-spacing: -.02em; }
+  .logo i { width: 18px; height: 18px; border-radius: 5px; background: var(--blue); position: relative; }
+  .logo i::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fff; }
+  .links { display: flex; gap: 26px; }
+  .links a, .right a { text-decoration: none; }
+  .right { display: flex; align-items: center; gap: 20px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px;
+    border-radius: 999px; background: var(--ink); color: #fff !important; font-size: 13px; font-weight: 500;
+    text-decoration: none; border: 0; cursor: pointer; font-family: inherit; transition: background .3s;
+  }
+  .btn:hover { background: var(--blue); }
+  .btn svg { width: 12px; height: 12px; }
+
+  /* ---------- stage ---------- */
+  #scroll { height: 1000vh; position: relative; z-index: 1; }
+  .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+  canvas#gl { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+
+  .hero { position: absolute; inset: 0; z-index: 1; }
+  .hero h1 {
+    position: absolute; top: 15vh; font-weight: 500; font-size: clamp(48px, 7.6vw, 118px);
+    line-height: .92; letter-spacing: -.055em; perspective: 900px;
+  }
+  .hero h1.l { left: var(--pad); }
+  .hero h1.r { right: var(--pad); text-align: right; }
+  .hero h1 span.ch { display: inline-block; transform-origin: 50% 100%; will-change: transform, opacity; }
+
+  .stats { position: absolute; z-index: 3; left: var(--pad); bottom: 8vh; display: flex; gap: 44px; opacity: 0; }
+  .stats div { font-size: 13px; font-weight: 500; }
+  .stats b { display: block; font-size: clamp(36px, 4vw, 60px); font-weight: 500; letter-spacing: -.05em; line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+  .helixcap { position: absolute; z-index: 3; right: var(--pad); top: 18vh; font-size: 13px; line-height: 1.3; font-weight: 500; opacity: 0; }
+  .helixcap p { max-width: 230px; }
+  .helixcap p + p { margin: 12px 0 0 120px; }
+
+  .part { position: absolute; z-index: 3; top: 50%; left: var(--pad); transform: translateY(-50%); width: 36%; max-width: 520px; }
+  .part h2 { font-weight: 500; font-size: clamp(44px, 5.6vw, 92px); line-height: .98; letter-spacing: -.05em; }
+  .part h2 .line { display: block; overflow: hidden; padding-bottom: .06em; }
+  .part h2 .line > span { display: inline-block; will-change: transform, opacity; }
+  .part .sub { display: flex; flex-direction: column; font-size: 13px; font-weight: 500; line-height: 1.3; margin-top: 30px; }
+  .part .sub p { max-width: 230px; }
+  .part .sub p + p { margin: 10px 0 0 160px; }
+  .part .btn { margin-top: 34px; }
+  .part .fade { will-change: opacity, transform; }
+
+  /* scroll ticks (v1) */
+  /* v5: full-height line rail with a magnifying focus (click to jump) */
+  .ticks { position: fixed; right: 10px; top: 22px; bottom: 22px; z-index: 60; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding-left: 14px; mix-blend-mode: difference; cursor: pointer; }
+  .ticks i { display: block; width: 16px; height: 1px; background: #fff; transform-origin: right center; transform: scaleX(.42); opacity: .3; will-change: transform, opacity; }
+
+  /* v5: hero background strokes */
+  #bgfx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+  .ver { position: fixed; left: 16px; bottom: 16px; z-index: 99; font: 600 11px Inter, sans-serif; letter-spacing: .06em; padding: 6px 10px; border-radius: 999px; background: var(--ink); color: #fff; }
+
+  /* ---------- shared section type ---------- */
+  .sec { position: relative; z-index: 1; padding: 0 var(--pad); }
+  .sec-head { display: flex; gap: 14px; font-size: 13px; font-weight: 500; }
+  .sec-head span:first-child { color: var(--muted); }
+  .h2 { font-weight: 500; font-size: clamp(44px, 6.4vw, 104px); line-height: .94; letter-spacing: -.055em; }
+  .small { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .small p { max-width: 240px; }
+  .mask { display: block; overflow: hidden; padding-bottom: .06em; }
+  .mask > span { display: inline-block; }
+  canvas.poster { display: block; width: 100%; height: auto; aspect-ratio: 512 / 712; border-radius: 10px; }
+
+  /* ---------- (01) manifesto ---------- */
+  .manifesto { padding-top: 22vh; padding-bottom: 40vh; overflow: clip; }
+  .manifesto .big {
+    margin-top: 6vh; font-weight: 500; font-size: clamp(30px, 4.1vw, 66px); line-height: 1.04; letter-spacing: -.045em;
+    max-width: 1180px; text-indent: 18%;
+  }
+  .manifesto .big .w { color: #c5cbdd; transition: none; }
+  .manifesto .notes { display: flex; margin-top: 9vh; margin-left: 30%; }
+  .manifesto .notes p:nth-child(2) { margin: 34px 0 0 60px; }
+  .manifesto .notes p:nth-child(3) { margin: 68px 0 0 60px; }
+  .manifesto .floater { position: absolute; width: clamp(70px, 7vw, 110px); z-index: -1; }
+  .manifesto .floater canvas { box-shadow: 0 30px 60px -30px rgba(11,20,51,.35); }
+
+  /* marquee */
+  .marquee { position: relative; z-index: 1; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 22px 0; }
+  .marquee .row { display: flex; width: max-content; font-size: clamp(28px, 3.4vw, 54px); font-weight: 500; letter-spacing: -.045em; white-space: nowrap; will-change: transform; }
+  .marquee .row span { padding-right: .6em; }
+  .marquee .row span i { font-style: normal; color: var(--blue); }
+
+  /* ---------- (02) rooms — horizontal ---------- */
+  .rooms { position: relative; z-index: 1; height: 100vh; overflow: hidden; }
+  .rooms-track { display: flex; align-items: center; height: 100vh; padding-left: var(--pad); width: max-content; will-change: transform; }
+  .room-intro { width: min(560px, 80vw); flex-shrink: 0; margin-right: 10vw; }
+  .room-intro .h2 { margin-top: 28px; }
+  .room-intro .small { margin-top: 34px; }
+  .room-intro .small p + p { margin: 10px 0 0 150px; }
+  .room { display: flex; align-items: flex-end; gap: 36px; flex-shrink: 0; margin-right: 9vw; perspective: 1200px; }
+  .room-card { width: clamp(240px, 26vw, 380px); transform-style: preserve-3d; will-change: transform; }
+  .room-card .tilt { transition: transform .5s cubic-bezier(.2,.7,.2,1); transform-style: preserve-3d; }
+  .room-card canvas { box-shadow: 0 40px 80px -40px rgba(11,20,51,.45); }
+  .room-info { width: 240px; padding-bottom: 6px; }
+  .room-info .num { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .room-info h3 { font-weight: 500; font-size: clamp(34px, 3.4vw, 52px); letter-spacing: -.05em; line-height: .95; margin: 14px 0 20px; }
+  .room-info p { font-size: 13px; font-weight: 500; line-height: 1.35; }
+  .room-info .count { display: inline-block; margin-top: 22px; font-size: 13px; font-weight: 500; border-bottom: 1px solid currentColor; }
+  .rooms-end { flex-shrink: 0; width: 30vw; }
+  .ruler { position: absolute; left: var(--pad); right: var(--pad); bottom: 6vh; height: 18px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .ruler i { display: block; width: 1px; height: 18px; background: var(--ink); transform-origin: center bottom; transform: scaleY(.3); opacity: .25; will-change: transform, opacity; }
+  .rooms-label { position: absolute; left: var(--pad); bottom: calc(6vh + 34px); font-size: 13px; font-weight: 500; display: flex; gap: 14px; }
+  .rooms-label span:first-child { color: var(--muted); }
+
+  /* ---------- (03) featured ---------- */
+  .featured { padding-top: 22vh; padding-bottom: 20vh; }
+  .feat-top { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 40px; }
+  .feat-top .h2 { margin-top: 28px; }
+  .feat-top .small { justify-self: end; }
+  .feat-top .small p + p { margin: 10px 0 0 120px; }
+  .filters { display: flex; gap: 8px; margin-top: 8vh; flex-wrap: wrap; }
+  .filters button {
+    font: 500 13px Inter, sans-serif; height: 34px; padding: 0 15px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); transition: all .3s;
+  }
+  .filters button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .filters button sup { font-size: 9px; margin-left: 3px; opacity: .6; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 28px 22px; margin-top: 34px; }
+  .fcard { perspective: 1200px; cursor: pointer; }
+  .fcard .inner { position: relative; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.2,.8,.2,1); }
+  .fcard:hover .inner, .fcard.flipped .inner { transform: rotateY(180deg); }
+  .fcard .face { backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 10px; overflow: hidden; }
+  .fcard .back {
+    position: absolute; inset: 0; transform: rotateY(180deg); background: var(--ink); color: #fff;
+    padding: 16px; font-size: 12px !important; display: flex; flex-direction: column; justify-content: space-between; font-size: 13px; font-weight: 500; line-height: 1.35;
+  }
+  @media (max-width: 1200px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+  .fcard .back h4 { font-weight: 500; font-size: 24px; letter-spacing: -.04em; line-height: 1; }
+  .fcard .back dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; }
+  .fcard .back dt { color: #8d98c4; }
+  .fcard .back q { color: #c9d3ff; }
+  .fcard .cap { display: flex; justify-content: space-between; font-size: 13px; font-weight: 500; margin-top: 12px; }
+  .fcard .cap span:last-child { color: var(--muted); }
+  .feat-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10vh; border-top: 1px solid var(--line); padding-top: 22px; font-size: 13px; font-weight: 500; }
+
+  .next { position: relative; z-index: 1; height: 50vh; display: grid; place-items: center; color: var(--muted); font-size: 13px; font-weight: 500; }
+
+
+  /* ---------- v4 hero copy: sits in the side columns, clear of the sphere ---------- */
+  .hero-copy { position: absolute; inset: 0; z-index: 3; pointer-events: none; font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .hero-copy .lead, .hero-copy .side { position: absolute; top: calc(15vh + clamp(48px, 7.6vw, 118px) * 1.84 + 5vh); }
+  .hero-copy .lead { left: var(--pad); }
+  .hero-copy .lead p { max-width: 230px; }
+  .hero-copy .lead p + p { margin: 14px 0 0 90px; max-width: 200px; }
+  .hero-copy .side { right: var(--pad); text-align: right; }
+  .hero-copy .side p + p { margin-top: 6px; color: var(--muted); }
+  .hero-copy .foot { position: absolute; bottom: 5vh; left: var(--pad); right: var(--pad); display: flex; justify-content: space-between; color: var(--muted); }
+  .hero-copy .foot span:first-child::after { content: " ↓"; display: inline-block; animation: nudge 1.6s ease-in-out infinite; }
+  @keyframes nudge { 50% { transform: translateY(4px); } }
+
+  /* ---------- (04) world — v6 dark particle stage ---------- */
+  .world { position: relative; z-index: 1; height: 100vh; background: var(--ink); color: #eef1f8; overflow: hidden; }
+  .world .sec-head span:first-child { color: #7f8bb3; }
+  .world-top { position: absolute; top: 14vh; left: var(--pad); right: var(--pad); display: flex; justify-content: space-between; align-items: flex-start; z-index: 2; pointer-events: none; }
+  .world-top .h2 { margin-top: 24px; font-size: clamp(40px, 5vw, 84px); }
+  .world-count { text-align: right; }
+  .world-count b { display: block; font-weight: 500; font-size: clamp(56px, 7vw, 120px); letter-spacing: -.06em; line-height: .85; font-variant-numeric: tabular-nums; }
+  .world-count span { font-size: 13px; color: #8d98c4; }
+  .map-wrap { position: absolute; inset: 0; }
+  #map { display: block; width: 100%; height: 100%; }
+  .map-tip {
+    position: absolute; z-index: 5; pointer-events: none; display: flex; gap: 12px; align-items: center;
+    background: #fff; color: var(--ink); border-radius: 12px; padding: 8px 14px 8px 8px; box-shadow: 0 20px 40px -18px rgba(0,0,0,.5);
+    font-size: 13px; font-weight: 500; line-height: 1.25; opacity: 0; transform: translate(-50%, calc(-100% - 18px)) scale(.9);
+    transition: opacity .25s, transform .35s cubic-bezier(.2,.8,.2,1); white-space: nowrap;
+  }
+  .map-tip.on { opacity: 1; transform: translate(-50%, calc(-100% - 18px)) scale(1); }
+  .map-tip canvas { width: 38px; border-radius: 5px; aspect-ratio: 512/712; }
+  .map-tip span { display: block; color: var(--muted); font-weight: 400; }
+  .world-foot { position: absolute; left: var(--pad); right: var(--pad); bottom: 6vh; display: flex; justify-content: space-between; align-items: flex-end; z-index: 2; pointer-events: none; }
+  .world-foot .small p { color: #a3aed3 !important; }
+  .world-foot .small p + p { margin: 10px 0 0 120px; }
+  .legend { display: flex; gap: 22px; font-size: 13px; color: #a3aed3; }
+  .legend i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; background: #d7defa; opacity: .6; }
+  .legend i.b { background: #8fb4ff; opacity: 1; }
+
+  /* ---------- (05) jury — v6 clean ---------- */
+  .jury { padding-top: 20vh; padding-bottom: 18vh; }
+  .jury-top { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 40px; }
+  .jury-top .h2 { margin-top: 28px; }
+  .jury-top .small { justify-self: end; }
+  .jury-top .small p + p { margin: 10px 0 0 120px; }
+  .jury-field { position: relative; margin-top: 10vh; padding: 9vh 0 11vh; cursor: none; }
+  .jrow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 22px; }
+  .jp { transition: transform .7s cubic-bezier(.2,.8,.2,1); }
+  .jp.picked { transform: translateY(-10px); }
+  .jp .jcap { display: flex; justify-content: space-between; margin-top: 12px; font-size: 13px; }
+  .jp .jcap span:last-child { color: var(--sub); }
+  .cur { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; will-change: transform; }
+  .cur svg { width: 16px; height: 22px; display: block; filter: drop-shadow(0 2px 4px rgba(11,20,51,.18)); }
+  .cur .pill { position: absolute; left: 12px; top: 19px; display: flex; gap: 8px; white-space: nowrap; background: var(--c); color: var(--fg); font-size: 13px; font-weight: 400; padding: 5px 11px; border-radius: 999px; }
+  .cur .pill b { font-weight: 500; }
+  .cur .pill em { font-style: normal; max-width: 0; overflow: hidden; opacity: 0; transition: max-width .6s cubic-bezier(.2,.8,.2,1), opacity .3s; }
+  .cur.near .pill em { max-width: 420px; opacity: .8; }
+  .cur.me { z-index: 6; transition: opacity .2s; }
+  @media (hover: none) { .cur.me { display: none; } .jury-field { cursor: auto; } }
+
+  /* ---------- v6: subtitles regular + lighter ---------- */
+  :root { --sub: #646d89; }
+  .small, .small p, .hero-copy, .part .sub, .helixcap, .stats div, .room-info p, .rules span, .fcard .cap, .manifesto .notes p, .feat-foot > span, .rooms-label, .room-intro .small p { font-weight: 400; color: var(--sub); }
+  .stats b { color: var(--ink); }
+
+
+  /* =================== v7 =================== */
+  .ver { top: 84px; bottom: auto !important; opacity: .85; background: #0b1433 !important; color: #fff !important; box-shadow: 0 0 0 1px rgba(255,255,255,.18); }
+  /* page-wide theme flip (light ⇄ dark) driven by the section in view */
+  body { transition: background-color .9s cubic-bezier(.2,0,0,1), color .9s cubic-bezier(.2,0,0,1); }
+  body, .sec, .sec-head, .h2, .small, .small p, .fcard .cap, .room-info, .feat-foot, .filters button { transition: color .9s cubic-bezier(.2,0,0,1), background-color .9s cubic-bezier(.2,0,0,1), border-color .9s cubic-bezier(.2,0,0,1); }
+  body[data-theme="dark"] { --bg: #0b1433; --ink: #eef1f8; --sub: #9aa5c9; --muted: #7f8bb3; --line: rgba(238,241,248,.14); background: #0b1433; color: #eef1f8; }
+  body[data-theme="dark"] .nav { background: rgba(23,34,78,.62); color: #eef1f8; }
+  body[data-theme="dark"] .btn { color: #0b1433 !important; }
+  .btn { color: var(--bg) !important; }
+  .nav { transition: opacity .5s, transform .5s, background-color .9s, color .9s; }
+
+  /* descenders (g, y, p) were clipped by the reveal masks */
+  .mask { padding-bottom: .16em; margin-bottom: -.1em; }
+
+  /* hero copy — one calm row along the bottom */
+  .hero-copy .bottom { position: absolute; left: var(--pad); right: var(--pad); bottom: 5vh; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 30px; }
+  .hero-copy .bottom .lead { position: static; max-width: 330px; }
+  .hero-copy .bottom .cue { justify-self: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .hero-copy .bottom .cue i { width: 1px; height: 30px; background: currentColor; opacity: .5; transform-origin: top; animation: cueline 1.8s cubic-bezier(.6,0,.2,1) infinite; }
+  @keyframes cueline { 0% { transform: scaleY(0); } 55% { transform: scaleY(1); transform-origin: top; } 56% { transform-origin: bottom; } 100% { transform: scaleY(0); transform-origin: bottom; } }
+  .hero-copy .bottom .side { position: static; justify-self: end; text-align: right; }
+  .hero-copy .bottom .side span { display: block; margin-top: 4px; opacity: .75; }
+
+  /* manifesto facts */
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; max-width: 1180px; margin-top: 12vh; }
+  .facts > div { position: relative; padding-top: 18px; }
+  .facts > div i { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--line); transform-origin: left; }
+  .facts span { font-size: 13px; color: var(--sub); }
+  .facts p { margin-top: 10px; font-size: clamp(17px, 1.45vw, 22px); line-height: 1.25; letter-spacing: -.02em; max-width: 300px; }
+
+  /* jury spacing */
+  .jury-field { margin-top: 2vh !important; padding: 5vh 0 8vh !important; }
+
+  /* world — transparent now, the page itself turns dark */
+  .world { background: transparent !important; }
+  .world .h2, .world .world-count b { color: var(--ink); }
+
+  /* ---------- (06) program ---------- */
+  .program { padding-top: 20vh; padding-bottom: 16vh; }
+  .prog-top { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 40px; }
+  .prog-top .h2 { margin-top: 28px; }
+  .prog-top .small { justify-self: end; }
+  .prog-top .small p + p { margin: 10px 0 0 120px; }
+  .events { margin-top: 9vh; }
+  .ev { position: relative; display: grid; grid-template-columns: 120px 140px 1fr 220px 120px; gap: 20px; align-items: center; padding: 26px 0; cursor: default; }
+  .ev .rule { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--line); transform-origin: left; }
+  .ev:last-child::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line); }
+  .ev .date { font-size: clamp(22px, 2vw, 30px); letter-spacing: -.04em; }
+  .ev .fmt, .ev .who { font-size: 13px; color: var(--sub); }
+  .ev h3 { font-weight: 400; font-size: clamp(20px, 1.9vw, 28px); letter-spacing: -.03em; transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  .ev:hover h3 { transform: translateX(14px); }
+  .ev .remind { justify-self: end; font: 400 13px Inter, sans-serif; color: var(--ink); background: none; border: 1px solid var(--line); border-radius: 999px; height: 32px; padding: 0 14px; cursor: pointer; transition: all .3s; }
+  .ev .remind:hover, .ev .remind.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .ev > *:not(.rule) { will-change: transform, opacity; }
+  .preview { position: fixed; left: 0; top: 0; width: 150px; z-index: 40; pointer-events: none; opacity: 0; transform: scale(.6); transition: opacity .3s, transform .4s cubic-bezier(.2,.8,.2,1); }
+  .preview.on { opacity: 1; transform: scale(1); }
+  .preview .in { will-change: transform; }
+  .preview canvas { box-shadow: 0 30px 60px -24px rgba(11,20,51,.45); }
+
+  /* ---------- (07) numbers + partners ---------- */
+  .numbers { padding-top: 14vh; padding-bottom: 14vh; }
+  .nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 7vh; }
+  .num { border-top: 1px solid var(--line); padding-top: 22px; }
+  .odo { display: flex; font-size: clamp(54px, 6.4vw, 108px); letter-spacing: -.06em; line-height: 1; height: 1em; overflow: hidden; }
+  .odo .d { display: inline-block; height: 1em; overflow: hidden; }
+  .odo .d > span { display: block; will-change: transform; }
+  .odo .d > span b { display: block; height: 1em; font-weight: 400; }
+  .num p { margin-top: 16px; font-size: 13px; color: var(--sub); max-width: 200px; }
+  .partners { margin-top: 14vh; }
+  .partners .lbl { font-size: 13px; color: var(--sub); margin-bottom: 26px; }
+  .plogos { overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+  .plogos .row { display: flex; align-items: center; gap: 80px; width: max-content; will-change: transform; }
+  .plogos .row span { font-size: 26px; color: var(--sub); opacity: .75; white-space: nowrap; transition: color .3s, opacity .3s; }
+  .plogos .row span:hover { color: var(--ink); opacity: 1; }
+
+  /* ---------- (08) voices ---------- */
+  .voices { padding-top: 16vh; padding-bottom: 18vh; }
+  .voices-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6vw; align-items: center; margin-top: 28px; }
+  .voices .small { margin-top: 30px; }
+  .voices .small p + p { margin: 10px 0 0 120px; }
+  .vctl { display: flex; align-items: center; gap: 22px; margin-top: 40px; font-size: 13px; }
+  .vctl .count { color: var(--sub); font-variant-numeric: tabular-nums; }
+  .stackwrap { position: relative; height: min(560px, 70vh); }
+  .vcard { position: absolute; left: 50%; top: 50%; width: min(400px, 80%); aspect-ratio: 512/640; margin-left: calc(min(400px, 80%) / -2); border-radius: 16px; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; will-change: transform; box-shadow: 0 30px 60px -30px rgba(11,20,51,.4); user-select: none; }
+  .vcard q { font-size: clamp(22px, 2vw, 30px); line-height: 1.12; letter-spacing: -.035em; quotes: "“" "”"; }
+  .vcard q::before { display: block; font-size: 90px; line-height: .7; margin-bottom: 12px; }
+  .vcard .by { font-size: 13px; display: flex; justify-content: space-between; border-top: 1px solid currentColor; padding-top: 14px; opacity: .85; }
+
+  /* ---------- (09) faq ---------- */
+  .faq { padding-top: 16vh; padding-bottom: 18vh; display: grid; grid-template-columns: .8fr 1.2fr; gap: 6vw; }
+  .faq .h2 { margin-top: 28px; }
+  .faq .small { margin-top: 30px; }
+  .qa { border-top: 1px solid var(--line); }
+  .qa:last-child { border-bottom: 1px solid var(--line); }
+  .qa button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 20px; background: none; border: 0; color: var(--ink); font: 400 clamp(19px, 1.6vw, 24px)/1.2 Inter, sans-serif; letter-spacing: -.025em; padding: 26px 0; cursor: pointer; text-align: left; }
+  .qa button i { position: relative; width: 14px; height: 14px; flex-shrink: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  .qa button i::before, .qa button i::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: currentColor; }
+  .qa button i::after { transform: rotate(90deg); }
+  .qa.open button i { transform: rotate(135deg); }
+  .qa .a { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .6s cubic-bezier(.2,.8,.2,1); }
+  .qa.open .a { grid-template-rows: 1fr; }
+  .qa .a > div { overflow: hidden; }
+  .qa .a p { font-size: 15px; line-height: 1.5; color: var(--sub); max-width: 560px; padding-bottom: 26px; }
+
+  /* ---------- final CTA: paste your poster ---------- */
+  .paste { position: relative; z-index: 1; height: 110vh; background: var(--blue); color: #fff; overflow: hidden; cursor: none; }
+  .paste .center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 3; width: min(900px, 90%); }
+  .paste h2 { font-weight: 500; font-size: clamp(52px, 8vw, 132px); line-height: .92; letter-spacing: -.06em; }
+  .paste .sub { margin: 26px auto 0; max-width: 360px; font-size: 14px; line-height: 1.45; opacity: .8; }
+  .paste .ctas { display: flex; gap: 12px; justify-content: center; margin-top: 34px; }
+  .paste .ctas a { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 20px; border-radius: 999px; font-size: 13px; text-decoration: none; background: #fff; color: var(--blue); cursor: pointer; }
+  .paste .ctas a.ghost { background: transparent; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
+  .paste .pp { position: absolute; width: clamp(80px, 8vw, 130px); z-index: 2; will-change: transform; filter: drop-shadow(0 16px 24px rgba(5,14,60,.35)); }
+  .paste .pp canvas { border-radius: 6px; }
+  .paste .hint { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; font-size: 12px; background: #fff; color: var(--blue); padding: 6px 11px; border-radius: 999px; white-space: nowrap; opacity: 0; transition: opacity .2s; }
+  .paste:hover .hint { opacity: 1; }
+
+  /* ---------- footer: a printed sheet ---------- */
+  .sheet { position: relative; z-index: 1; background: #f6f5f1; color: #0b1433; padding: 9vh var(--pad) 0; overflow: hidden; }
+  .sheet::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .35; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.12 0 0 0 0 0.25 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .crop { position: absolute; width: 22px; height: 22px; }
+  .crop::before, .crop::after { content: ""; position: absolute; background: #0b1433; }
+  .crop::before { width: 22px; height: 1px; top: 11px; } .crop::after { width: 1px; height: 22px; left: 11px; }
+  .crop.tl { left: 18px; top: 18px; } .crop.tr { right: 18px; top: 18px; } .crop.bl { left: 18px; bottom: 18px; } .crop.br { right: 18px; bottom: 18px; }
+  .reg { position: absolute; width: 20px; height: 20px; border: 1px solid #0b1433; border-radius: 50%; }
+  .reg::before, .reg::after { content: ""; position: absolute; background: #0b1433; }
+  .reg::before { left: -6px; right: -6px; top: 50%; height: 1px; } .reg::after { top: -6px; bottom: -6px; left: 50%; width: 1px; }
+  .reg.l { left: 18px; top: 50%; } .reg.r { right: 18px; top: 50%; }
+  .sheet-top { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 40px; position: relative; z-index: 2; }
+  .sheet .lbl { font-size: 13px; color: #646d89; margin-bottom: 14px; }
+  .sheet h3 { font-weight: 500; font-size: clamp(26px, 2.6vw, 40px); letter-spacing: -.045em; line-height: 1; }
+  .sheet form { display: flex; margin-top: 26px; border-bottom: 1px solid #0b1433; max-width: 380px; }
+  .sheet input { flex: 1; background: none; border: 0; font: 400 15px Inter, sans-serif; color: #0b1433; padding: 12px 0; outline: none; }
+  .sheet input::placeholder { color: #8b93ab; }
+  .sheet form button { background: none; border: 0; font: 500 13px Inter, sans-serif; color: #0b1433; cursor: pointer; }
+  .sheet .thanks { font-size: 13px; color: #1f45e6; margin-top: 10px; min-height: 18px; }
+  .sheet ul { list-style: none; font-size: 15px; line-height: 2; }
+  .sheet ul li { overflow-wrap: anywhere; }
+  .sheet ul a { text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size .4s cubic-bezier(.2,.8,.2,1); }
+  .sheet ul a:hover { background-size: 100% 1px; }
+  .wordmark { position: relative; margin-top: 10vh; font-weight: 600; font-size: 21.6vw; letter-spacing: -.075em; line-height: .78; white-space: nowrap; margin-left: -.04em; user-select: none; }
+  .wordmark span { display: block; }
+  .wordmark .l1 { color: #1f45e6; mix-blend-mode: multiply; }
+  .wordmark .l2 { position: absolute; left: 0; top: 0; color: #38c6ff; mix-blend-mode: multiply; will-change: transform; }
+  .strip { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 22px 0 46px; font-size: 12px; color: #646d89; border-top: 1px solid rgba(11,20,51,.12); margin-top: 3vh; }
+  .bars { display: flex; }
+  .bars i { width: 22px; height: 12px; }
+  .strip .meta { display: flex; gap: 22px; flex-wrap: wrap; }
+
+  @media (max-width: 860px) {
+    .hero-copy .bottom { grid-template-columns: 1fr; } .hero-copy .bottom .cue { display: none; } .hero-copy .bottom .side { justify-self: start; text-align: left; }
+    .facts, .nums { grid-template-columns: 1fr 1fr; }
+    .prog-top, .voices-grid, .faq { grid-template-columns: 1fr; } .prog-top .small { justify-self: start; } .prog-top .small p + p, .voices .small p + p { margin-left: 0; }
+    .ev { grid-template-columns: 1fr auto; } .ev .fmt, .ev .who { display: none; }
+    .sheet-top { grid-template-columns: 1fr 1fr; }
+    .strip { flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (max-width: 860px) {
+    .links { display: none; }
+    .nav { width: calc(100% - 32px); }
+    .nav .right > a:first-child { display: none; }
+    :root { --pad: 16px; }
+    .hero h1 { font-size: 13vw; }
+    .hero h1.r { top: 34vh; }
+    .hero-copy .lead { top: auto; bottom: 14vh; left: 16px; } .hero-copy .lead p + p { margin-left: 0; }
+    .hero-copy .side { top: auto; bottom: 14vh; right: 16px; }
+    .hero-copy .foot span:last-child { display: none; }
+    .jury-top { grid-template-columns: 1fr; } .jrow { grid-template-columns: repeat(3, 1fr); }
+    .world-top { flex-direction: column; gap: 20px; } .world-count { text-align: left; }
+    .jury-top .small { text-align: left; justify-self: start; }
+    .world-foot { flex-direction: column; gap: 24px; } .world-foot .small p + p, .call .small p + p, .jury-top .small p + p { margin-left: 0; }
+    .timeline ol, .rules { grid-template-columns: 1fr 1fr; gap: 28px 12px; }
+    .helixcap { display: none; }
+    .stats { gap: 22px; }
+    .part { left: 16px; right: 16px; width: auto; top: auto; bottom: 6vh; transform: none; }
+    .part .sub p + p { margin-left: 0; }
+    .manifesto .big { text-indent: 0; }
+    .manifesto .notes { margin-left: 0; flex-direction: column; }
+    .manifesto .notes p:nth-child(n) { margin: 12px 0 0; }
+    .room { flex-direction: column; align-items: flex-start; }
+    .room-card { width: 62vw; }
+    .feat-top { grid-template-columns: 1fr; }
+    .feat-top .small { justify-self: start; }
+    .feat-top .small p + p { margin-left: 0; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 20px 12px; }
+    .ticks { display: none; }
+    .jury-top { flex-direction: column; align-items: flex-start; } .jury-top .small p + p { margin-left: 0; }
+    .jury-field { height: 110vh; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+</head>
+<body>
+<nav class="nav" id="nav">
+  <div class="logo"><i></i>blauwerk</div>
+  <div class="links"><a href="#">Exhibition</a><a href="#rooms">Rooms</a><a href="#featured">Jury picks</a><a href="#">Open call</a><a href="#">About</a></div>
+  <div class="right"><a href="#">Log in</a><a class="btn" href="#">Submit a poster <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
+</nav>
+<div class="ticks" id="ticks"></div>
+
+<section id="scroll">
+  <div class="stage">
+    <canvas id="bgfx"></canvas>
+    <div class="hero" id="hero">
+      <h1 class="l split">Posters<br>that move</h1>
+      <h1 class="r split">people<br>everywhere</h1>
+    </div>
+
+    <canvas id="gl"></canvas>
+
+    <div class="hero-copy" id="meta">
+      <div class="bottom">
+        <p class="lead">Blauwerk is an online biennale that gathers 1,200 posters from 64 countries onto one open wall. Free to walk, from anywhere.</p>
+        <p class="cue">Scroll to step inside<i></i></p>
+        <p class="side">Open call until 14 March<span>Edition 04 · 2027</span></p>
+      </div>
+    </div>
+
+    <div class="helixcap" id="helixcap">
+      <p>Every poster is a thread — a message one stranger leaves for another.</p>
+      <p>Spun together, they become a record of how the world talks on paper</p>
+    </div>
+    <div class="stats" id="stats">
+      <div><b data-to="1200">0</b>posters on show</div>
+      <div><b data-to="64">0</b>countries</div>
+      <div><b data-to="18">0</b>curators</div>
+    </div>
+
+    <div class="part" id="part">
+      <h2>
+        <span class="line"><span>One wall.</span></span>
+        <span class="line"><span>Every voice</span></span>
+        <span class="line"><span>in print.</span></span>
+      </h2>
+      <div class="sub fade">
+        <p>Turn a poster over to meet the studio, the city and the idea that started it.</p>
+        <p>Browse by colour, country or typeface</p>
+      </div>
+      <a class="btn fade" href="#featured">Walk the exhibition <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- (01) manifesto -->
+<section class="sec manifesto" id="manifesto">
+  <div class="sec-head reveal"><span>(01)</span><span>Why paper still matters</span></div>
+  <p class="big" id="mtext">A poster has three seconds to stop a stranger. No algorithm, no feed, no second chance — just paper, a wall and an idea loud enough to be seen. Blauwerk is a year-long celebration of the people who make those three seconds count.</p>
+  <div class="facts">
+    <div><i></i><span>Edition</span><p>The fourth, since 2019</p></div>
+    <div><i></i><span>Run by</span><p>A non-profit foundation in Rotterdam</p></div>
+    <div><i></i><span>The one rule</span><p>Every poster was printed at least once in the real world</p></div>
+  </div>
+  <div class="floater" data-y0="0" data-y1="-320" data-x="40" data-r="8" style="right:3%;top:5vh"><canvas class="poster" data-d="1"></canvas></div>
+  <div class="floater" data-y0="20" data-y1="-60" data-x="24" data-r="-10" style="left:4%;bottom:12vh"><canvas class="poster" data-d="3"></canvas></div>
+  <div class="floater" data-y0="40" data-y1="-420" data-x="-30" data-r="12" style="right:3%;bottom:12vh"><canvas class="poster" data-d="12"></canvas></div>
+</section>
+
+<div class="marquee" id="marquee">
+  <div class="row"><span>What do we owe each other? <i>—</i></span><span>Open call 2027 <i>—</i></span><span>What do we owe each other? <i>—</i></span><span>Open call 2027 <i>—</i></span><span>What do we owe each other? <i>—</i></span><span>Open call 2027 <i>—</i></span></div>
+</div>
+
+<!-- (02) rooms -->
+<section class="rooms" id="rooms">
+  <div class="rooms-track" id="track">
+    <div class="room-intro">
+      <div class="sec-head"><span>(02)</span><span>Theme 2027</span></div>
+      <h2 class="h2"><span class="mask"><span>What do we</span></span><span class="mask"><span>owe each</span></span><span class="mask"><span>other?</span></span></h2>
+      <div class="small">
+        <p>We asked designers everywhere one question. 1,200 of them answered in print.</p>
+        <p>Four rooms. Four kinds of answer</p>
+      </div>
+    </div>
+    <article class="room">
+      <div class="room-card"><div class="tilt"><canvas class="poster" data-d="4"></canvas></div></div>
+      <div class="room-info"><span class="num">Room 01</span><h3>Neighbours</h3><p>Posters about the people next door — courtyards, queues, shared walls and the small rules that let us live close together.</p><a class="count" href="#">312 posters</a></div>
+    </article>
+    <article class="room">
+      <div class="room-card"><div class="tilt"><canvas class="poster" data-d="6"></canvas></div></div>
+      <div class="room-info"><span class="num">Room 02</span><h3>Climate<br>&amp; care</h3><p>Water, air and soil. What we borrow from a place, and how we might give it back.</p><a class="count" href="#">287 posters</a></div>
+    </article>
+    <article class="room">
+      <div class="room-card"><div class="tilt"><canvas class="poster" data-d="2"></canvas></div></div>
+      <div class="room-info"><span class="num">Room 03</span><h3>Memory</h3><p>Family archives, lost languages, the faces on old banknotes. Remembering as something we do for each other.</p><a class="count" href="#">341 posters</a></div>
+    </article>
+    <article class="room">
+      <div class="room-card"><div class="tilt"><canvas class="poster" data-d="13"></canvas></div></div>
+      <div class="room-info"><span class="num">Room 04</span><h3>Tomorrow’s<br>type</h3><p>Letterforms built for readers who don’t exist yet. Experimental typography as a promise to the future.</p><a class="count" href="#">260 posters</a></div>
+    </article>
+    <div class="rooms-end"></div>
+  </div>
+  <div class="rooms-label"><span id="roomsNum">01 / 04</span><span>Scroll to walk through the rooms</span></div>
+  <div class="ruler" id="roomsRuler"></div>
+</section>
+
+<!-- (03) featured -->
+<section class="sec featured" id="featured">
+  <div class="feat-top">
+    <div>
+      <div class="sec-head reveal"><span>(03)</span><span>Picked by the jury</span></div>
+      <h2 class="h2"><span class="mask"><span>Twelve posters</span></span><span class="mask"><span>to start with</span></span></h2>
+    </div>
+    <div class="small">
+      <p class="reveal">Hover a poster to turn it over. Every back tells you who made it, where and why.</p>
+      <p class="reveal">Filter by what caught your eye</p>
+    </div>
+  </div>
+  <div class="filters" id="filters">
+    <button class="on" data-f="all">All<sup>12</sup></button>
+    <button data-f="type">Typography<sup>4</sup></button>
+    <button data-f="photo">Photography<sup>4</sup></button>
+    <button data-f="abstract">Abstract<sup>4</sup></button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="feat-foot"><span>1,188 more posters on the wall</span><a class="btn" href="#">Open the full archive <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
+</section>
+
+<!-- (04) world — v6 -->
+<section class="world" id="world">
+  <div class="map-wrap">
+    <canvas id="map"></canvas>
+    <div class="map-tip" id="mapTip"><canvas class="poster" data-d="0"></canvas><div><b id="tipCity">Lagos</b><span id="tipInfo">48 posters</span></div></div>
+  </div>
+  <div class="world-top">
+    <div>
+      <div class="sec-head"><span>(04)</span><span>Where the wall comes from</span></div>
+      <h2 class="h2"><span class="mask"><span>Sixty-four</span></span><span class="mask"><span>countries,</span></span><span class="mask"><span>one wall</span></span></h2>
+    </div>
+    <div class="world-count"><b id="worldNum">0</b><span>countries sent a poster this year</span></div>
+  </div>
+  <div class="world-foot">
+    <div class="small">
+      <p>The wall began in Rotterdam. Keep scrolling and watch it grow across the world, one poster at a time.</p>
+      <p>Hover a blue point to see one poster from that city</p>
+    </div>
+    <div class="legend"><span><i class="b"></i>Cities with posters</span><span><i></i>One tile, one poster</span></div>
+  </div>
+</section>
+
+<!-- (05) jury — v6 -->
+<section class="sec jury" id="jury">
+  <div class="jury-top">
+    <div>
+      <div class="sec-head reveal"><span>(05)</span><span>The jury</span></div>
+      <h2 class="h2"><span class="mask"><span>Six people are</span></span><span class="mask"><span>already looking</span></span></h2>
+    </div>
+    <div class="small">
+      <p class="reveal">Designers, printers and teachers from six cities. Move closer to one of them to hear what they look for.</p>
+      <p class="reveal">Shortlist announced 20 April</p>
+    </div>
+  </div>
+  <div class="jury-field" id="field">
+    <div class="jrow">
+      <div class="jp"><canvas class="poster" data-d="0"></canvas><div class="jcap"><span>Deep Field</span><span>Lagos</span></div></div>
+      <div class="jp"><canvas class="poster" data-d="4"></canvas><div class="jcap"><span>Quiet Voices</span><span>Kyiv</span></div></div>
+      <div class="jp"><canvas class="poster" data-d="5"></canvas><div class="jcap"><span>B</span><span>Berlin</span></div></div>
+      <div class="jp"><canvas class="poster" data-d="1"></canvas><div class="jcap"><span>Tide</span><span>Busan</span></div></div>
+      <div class="jp"><canvas class="poster" data-d="6"></canvas><div class="jcap"><span>Undertow</span><span>Mexico City</span></div></div>
+      <div class="jp"><canvas class="poster" data-d="13"></canvas><div class="jcap"><span>Ø</span><span>Bergen</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- (06) program -->
+<section class="sec program" id="program">
+  <div class="prog-top">
+    <div>
+      <div class="sec-head reveal"><span>(06)</span><span>Program</span></div>
+      <h2 class="h2"><span class="mask"><span>Beyond</span></span><span class="mask"><span>the wall</span></span></h2>
+    </div>
+    <div class="small">
+      <p class="reveal">Six weeks of talks, reviews and workshops around the exhibition. All online, one evening in Rotterdam.</p>
+      <p class="reveal">Every session is free and recorded</p>
+    </div>
+  </div>
+  <div class="events" id="events">
+    <div class="ev" data-d="0"><i class="rule"></i><span class="date">12 Jun</span><span class="fmt">Lecture</span><h3>Paper is a public space</h3><span class="who">Amara Eze, Lagos</span><button class="remind">Remind me</button></div>
+    <div class="ev" data-d="4"><i class="rule"></i><span class="date">19 Jun</span><span class="fmt">Portfolio review</span><h3>Fifteen minutes with the jury</h3><span class="who">All six jurors</span><button class="remind">Remind me</button></div>
+    <div class="ev" data-d="6"><i class="rule"></i><span class="date">26 Jun</span><span class="fmt">Workshop</span><h3>Riso in your kitchen</h3><span class="who">Riso Accra</span><button class="remind">Remind me</button></div>
+    <div class="ev" data-d="13"><i class="rule"></i><span class="date">03 Jul</span><span class="fmt">Talk</span><h3>Type for readers who don’t exist yet</h3><span class="who">Olena Marchuk, Kyiv</span><button class="remind">Remind me</button></div>
+    <div class="ev" data-d="2"><i class="rule"></i><span class="date">10 Jul</span><span class="fmt">City walk</span><h3>Wheatpaste walk through Rotterdam</h3><span class="who">Blauwerk team · in person</span><button class="remind">Remind me</button></div>
+    <div class="ev" data-d="11"><i class="rule"></i><span class="date">17 Jul</span><span class="fmt">Ceremony</span><h3>Closing night &amp; awards</h3><span class="who">Online + Rotterdam</span><button class="remind">Remind me</button></div>
+  </div>
+  <div class="preview" id="preview"><div class="in"><canvas class="poster" data-d="0"></canvas></div></div>
+</section>
+
+<!-- (07) numbers + partners -->
+<section class="sec numbers" id="numbers">
+  <div class="sec-head reveal"><span>(07)</span><span>The fourth edition in numbers</span></div>
+  <div class="nums">
+    <div class="num"><div class="odo" data-v="1,200"></div><p>posters hung on the wall this year</p></div>
+    <div class="num"><div class="odo" data-v="64"></div><p>countries, from Iceland to Indonesia</p></div>
+    <div class="num"><div class="odo" data-v="310k"></div><p>people walked the wall in 2025</p></div>
+    <div class="num"><div class="odo" data-v="€40k"></div><p>in prizes and printing grants</p></div>
+  </div>
+  <div class="partners">
+    <p class="lbl reveal">Printed and supported by</p>
+    <div class="plogos"><div class="row" id="plogos"></div></div>
+  </div>
+</section>
+
+<!-- (08) voices -->
+<section class="sec voices" id="voices">
+  <div class="sec-head reveal"><span>(08)</span><span>Voices from 2025</span></div>
+  <div class="voices-grid">
+    <div>
+      <h2 class="h2"><span class="mask"><span>What it feels</span></span><span class="mask"><span>like to hang</span></span><span class="mask"><span>on the wall</span></span></h2>
+      <div class="small">
+        <p class="reveal">Last edition’s designers, in their own words.</p>
+        <p class="reveal">Tap a card to pass it on</p>
+      </div>
+      <div class="vctl reveal"><button class="btn" id="vnext">Next voice <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></button><span class="count" id="vcount">01 / 04</span></div>
+    </div>
+    <div class="stackwrap" id="stack2">
+      <article class="vcard" style="background:#1f45e6;color:#fff"><q>Seeing my poster next to one from Busan felt like we had been talking for years.</q><div class="by"><span>Lina Haddad</span><span>Beirut · 2025</span></div></article>
+      <article class="vcard" style="background:#dfe7ff;color:#0b1433"><q>The jury notes were the most useful feedback I’ve had since art school.</q><div class="by"><span>Tomás Reyes</span><span>Manila · 2025</span></div></article>
+      <article class="vcard" style="background:#0b1433;color:#eef1f8"><q>I printed it in my kitchen. Three hundred thousand people walked past it.</q><div class="by"><span>Ama Owusu</span><span>Accra · 2025</span></div></article>
+      <article class="vcard" style="background:#6fa3ff;color:#0b1433"><q>It is the only exhibition my students actually want to enter.</q><div class="by"><span>Henrik Lund</span><span>Aarhus · 2025</span></div></article>
+    </div>
+  </div>
+</section>
+
+<!-- (09) faq -->
+<section class="sec faq" id="faq">
+  <div>
+    <div class="sec-head reveal"><span>(09)</span><span>FAQ</span></div>
+    <h2 class="h2"><span class="mask"><span>Questions,</span></span><span class="mask"><span>answered</span></span></h2>
+    <div class="small"><p class="reveal">Anything else — write to hello@blauwerk.example</p></div>
+  </div>
+  <div class="qas">
+    <div class="qa"><button>Who can submit a poster?<i></i></button><div class="a"><div><p>Anyone, anywhere. Students, studios and first-timers are judged side by side. The only rule is that the poster was printed at least once in the real world.</p></div></div></div>
+    <div class="qa"><button>Do I keep the rights to my work?<i></i></button><div class="a"><div><p>Always. You give Blauwerk permission to show the poster on the wall and in the archive — nothing more. You can ask us to remove it at any time.</p></div></div></div>
+    <div class="qa"><button>Is visiting the exhibition free?<i></i></button><div class="a"><div><p>Yes. The wall is open to everyone, without an account. The program sessions are free too.</p></div></div></div>
+    <div class="qa"><button>Can a school take part as a class?<i></i></button><div class="a"><div><p>Yes — teachers can register a class and submit up to 30 posters together. Each one is still reviewed on its own.</p></div></div></div>
+    <div class="qa"><button>How is the jury chosen?<i></i></button><div class="a"><div><p>Each edition, the previous jury nominates designers, printers and teachers from cities that are new to the wall. The foundation makes the final invitation.</p></div></div></div>
+  </div>
+</section>
+
+<!-- final CTA — paste your poster -->
+<section class="paste" id="paste">
+  <div class="center">
+    <h2>The wall is<br>still growing.</h2>
+    <p class="sub">Every poster here was pasted by someone who decided to be seen. Yours is next.</p>
+    <div class="ctas"><a href="#">Submit a poster <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a><a class="ghost" href="#">Walk the exhibition</a></div>
+  </div>
+  <div class="hint" id="pasteHint">Click to paste a poster</div>
+</section>
+
+<!-- footer — a printed sheet -->
+<footer class="sheet" id="sheet">
+  <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
+  <span class="reg l"></span><span class="reg r"></span>
+  <div class="sheet-top">
+    <div>
+      <p class="lbl">Newsletter</p>
+      <h3>One email a month.<br>Only posters.</h3>
+      <form id="nl"><input type="email" placeholder="your@email.com" aria-label="Email" required /><button type="submit">Subscribe →</button></form>
+      <p class="thanks" id="thanks"></p>
+    </div>
+    <div><p class="lbl">Exhibition</p><ul><li><a href="#">The wall</a></li><li><a href="#rooms">Rooms</a></li><li><a href="#featured">Jury picks</a></li><li><a href="#world">Countries</a></li></ul></div>
+    <div><p class="lbl">Take part</p><ul><li><a href="#">Submit a poster</a></li><li><a href="#program">Program</a></li><li><a href="#faq">FAQ</a></li><li><a href="#">For schools</a></li></ul></div>
+    <div><p class="lbl">Follow</p><ul><li><a href="#">Instagram</a></li><li><a href="#">Are.na</a></li><li><a href="#">Newsletter</a></li><li><a href="#">hello@blauwerk.example</a></li></ul></div>
+  </div>
+  <div class="wordmark" id="wordmark"><span class="l1">blauwerk</span><span class="l2" aria-hidden="true">blauwerk</span></div>
+  <div class="strip">
+    <div class="bars"><i style="background:#06102e"></i><i style="background:#0b1a4a"></i><i style="background:#1f45e6"></i><i style="background:#6fa3ff"></i><i style="background:#38c6ff"></i><i style="background:#dfe7ff"></i><i style="background:#f5f7fd"></i></div>
+    <div class="meta"><span>Sheet 04 / 27</span><span>Riso Blue + Fluo Cyan</span><span>120 g/m²</span><span>Printed in Rotterdam</span></div>
+    <span>© Blauwerk Foundation 2027</span>
+  </div>
+</footer>
+<div class="ver">v7 · theme flip · poster map · full page</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ================= helpers ================= */
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const range = (p, a, b) => clamp((p - a) / (b - a));
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const easeOutBack = t => { const c = 1.6; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+const rand = rng(7);
+
+/* ================= split hero text into letters ================= */
+document.querySelectorAll('.split').forEach(el => {
+  const walk = node => [...node.childNodes].forEach(n => {
+    if (n.nodeType === 3) {
+      const frag = document.createDocumentFragment();
+      [...n.textContent].forEach(c => {
+        if (c === ' ') { frag.appendChild(document.createTextNode(' ')); return; }
+        const s = document.createElement('span'); s.className = 'ch'; s.textContent = c; frag.appendChild(s);
+      });
+      n.replaceWith(frag);
+    } else if (n.nodeName !== 'BR') walk(n);
+  });
+  walk(el);
+});
+const heroChars = [...document.querySelectorAll('.hero .ch')].map((el, i) => ({ el, i }));
+
+/* ================= posters (blue palette) ================= */
+const NAVY = '#0a1a4a', COBALT = '#1f45e6', ICE = '#dfe7ff', SKY = '#6fa3ff', PAPER = '#f5f7fd', CYAN = '#38c6ff', DEEP = '#06102e';
+const designs = [
+  { bg: DEEP,   title: 'Deep\nField', style: 'orb' },
+  { bg: COBALT, title: 'Tide',        style: 'duo', duo: [NAVY, SKY] },
+  { bg: ICE,    title: 'Azul',        style: 'photoTop', duo: [NAVY, ICE] },
+  { bg: PAPER,  title: 'Blue\nHour',  style: 'circles' },
+  { bg: PAPER,  title: 'Quiet\nVoices\nCarry', style: 'editorial', duo: [COBALT, PAPER] },
+  { bg: COBALT, title: 'B',           style: 'bigLetter', duo: [NAVY, SKY] },
+  { bg: SKY,    title: 'Undertow',    style: 'waves' },
+  { bg: NAVY,   title: '',            style: 'photoFull', duo: [DEEP, SKY] },
+  { bg: NAVY,   title: 'Indigo',      style: 'duo', duo: [DEEP, COBALT] },
+  { bg: ICE,    title: 'Glass',       style: 'photoTop', duo: [COBALT, ICE] },
+  { bg: COBALT, title: '',            style: 'photoFull', duo: [NAVY, CYAN] },
+  { bg: DEEP,   title: 'Kobalt\n27',  style: 'orb' },
+  { bg: PAPER,  title: 'Wave\nForm',  style: 'waves' },
+  { bg: NAVY,   title: 'Ø',           style: 'bigLetter', duo: [DEEP, COBALT] },
+];
+const CW = 512, CH = 712;
+
+const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function duotone(ctx, x, y, w, h, dark, light) {
+  try {
+    const d = ctx.getImageData(x, y, w, h), a = hex(dark), b = hex(light), px = d.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const l = Math.pow((px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11) / 255, 1.1);
+      px[i] = a[0] + (b[0] - a[0]) * l; px[i + 1] = a[1] + (b[1] - a[1]) * l; px[i + 2] = a[2] + (b[2] - a[2]) * l;
+    }
+    ctx.putImageData(d, x, y);
+  } catch (e) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = light; ctx.fillRect(x, y, w, h); ctx.restore(); }
+}
+
+function drawPoster(ctx, d, img) {
+  ctx.save();
+  ctx.fillStyle = d.bg; ctx.fillRect(0, 0, CW, CH);
+  const photo = (x, y, w, h, duo) => {
+    if (!img) { const g = ctx.createLinearGradient(x, y, x, y + h); g.addColorStop(0, duo ? duo[1] : SKY); g.addColorStop(1, duo ? duo[0] : NAVY); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); return; }
+    const s = Math.max(w / img.width, h / img.height), iw = img.width * s, ih = img.height * s;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); ctx.restore();
+    if (duo) duotone(ctx, x, y, w, h, duo[0], duo[1]);
+  };
+  const small = (txt, x, y, col = '#fff', a = 'left') => { ctx.font = '600 13px Inter, sans-serif'; ctx.fillStyle = col; ctx.textAlign = a; ctx.fillText(txt, x, y); };
+  const lines = (txt, x, y, size, col, weight = 700, lh = .95) => {
+    ctx.font = `${weight} ${size}px Inter, sans-serif`; ctx.fillStyle = col; ctx.textAlign = 'left';
+    txt.split('\n').forEach((l, i) => ctx.fillText(l, x, y + i * size * lh));
+  };
+  const footer = col => { ctx.fillStyle = col; ctx.fillRect(36, CH - 40, CW - 72, 1.5); small('BLAUWERK 27', 36, CH - 16, col); small('№ ' + (100 + (d.title.length * 37) % 900), CW - 36, CH - 16, col, 'right'); };
+
+  switch (d.style) {
+    case 'orb': {
+      const g = ctx.createRadialGradient(CW * .5, CH * .42, 6, CW * .5, CH * .42, CW * .6);
+      g.addColorStop(0, '#d6f3ff'); g.addColorStop(.12, CYAN); g.addColorStop(.38, COBALT); g.addColorStop(.75, '#0b1a66'); g.addColorStop(1, DEEP);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+      ctx.strokeStyle = 'rgba(180,220,255,.35)'; ctx.lineWidth = 1;
+      for (let r = 60; r < 400; r += 34) { ctx.beginPath(); ctx.arc(CW * .5, CH * .42, r, 0, Math.PI * 2); ctx.stroke(); }
+      lines(d.title, 36, CH - 150, 74, '#fff', 600, .95);
+      small('EXHIBITION', 36, 50, '#cfe0ff');
+      footer('#cfe0ff');
+      break;
+    }
+    case 'duo':
+      photo(0, 0, CW, CH, d.duo);
+      lines(d.title, 30, CH - 70, 116, '#fff', 700, 1);
+      small('OPEN CALL 2027', 34, 48);
+      break;
+    case 'photoTop':
+      photo(0, 150, CW, CH - 150, d.duo);
+      lines(d.title, 30, 118, 104, NAVY, 600, 1);
+      small('ISSUE 04', CW - 30, 40, NAVY, 'right');
+      break;
+    case 'circles': {
+      const cols = [COBALT, SKY, NAVY, CYAN];
+      for (let i = 0; i < 9; i++) { ctx.fillStyle = cols[i % 4]; ctx.beginPath(); ctx.arc(110 + (i % 3) * 146, 110 + ((i / 3) | 0) * 146, 64, 0, Math.PI * (i % 2 ? 1 : 2)); ctx.fill(); }
+      lines(d.title, 36, CH - 170, 78, NAVY, 700, .95);
+      footer(NAVY);
+      break;
+    }
+    case 'editorial':
+      lines(d.title, 30, 92, 72, NAVY, 700, .98);
+      ctx.fillStyle = COBALT; ctx.fillRect(30, 420, 200, 200);
+      photo(250, 320, CW - 250, CH - 320, d.duo);
+      small('THE INTERVIEW', CW - 30, 40, NAVY, 'right');
+      break;
+    case 'bigLetter':
+      photo(CW * .4, 0, CW * .6, CH, d.duo);
+      ctx.font = '800 620px Inter, sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+      ctx.fillText(d.title, -30, CH - 70);
+      break;
+    case 'waves': {
+      const dark = d.bg === PAPER;
+      for (let k = 0; k < 16; k++) {
+        ctx.strokeStyle = dark ? (k % 3 ? COBALT : CYAN) : (k % 2 ? '#fff' : NAVY); ctx.lineWidth = 5;
+        ctx.beginPath();
+        for (let x = 0; x <= CW; x += 8) { const y = 70 + k * 30 + Math.sin(x / 50 + k * .5) * 18; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.stroke();
+      }
+      lines(d.title, 34, CH - 110, 70, dark ? NAVY : '#fff', 700, .95);
+      footer(dark ? NAVY : '#fff');
+      break;
+    }
+    case 'photoFull':
+      photo(0, 0, CW, CH, d.duo);
+      small('FIELD NOTES — LISBON', 30, 46);
+      break;
+  }
+  ctx.restore();
+}
+
+const designImgs = [], imgWaiters = designs.map(() => []);
+const posterTextures = designs.map((d, i) => {
+  const c = document.createElement('canvas'); c.width = CW; c.height = CH;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  drawPoster(ctx, d, null);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const redraw = img => { drawPoster(ctx, d, img); tex.needsUpdate = true; };
+  const img = new Image(); img.crossOrigin = 'anonymous';
+  img.onload = () => { tex.userData.img = img; designImgs[i] = img; redraw(img); imgWaiters[i].forEach(f => f()); };
+  img.src = `https://picsum.photos/seed/blau${i * 11 + 5}/600/820?grayscale`;
+  tex.userData.redraw = () => redraw(tex.userData.img || null);
+  return tex;
+});
+document.fonts && document.fonts.ready.then(() => posterTextures.forEach(t => t.userData.redraw()));
+
+/* ================= three setup ================= */
+const BG = new THREE.Color('#eef2fb');
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(BG, 17, 30);
+const camera = new THREE.PerspectiveCamera(32, 1, .1, 100);
+camera.position.set(0, 0, 20);
+
+function roundedCard(w, h, r) {
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  const g = new THREE.ShapeGeometry(s, 6), uv = g.attributes.uv, p = g.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (p.getX(i) - x) / w, (p.getY(i) - y) / h);
+  return g;
+}
+const CARD_H = CH / CW;
+const geo = roundedCard(1, CARD_H, .06);
+
+const COLS = 10, ROWS = 6, N = COLS * ROWS;
+const cards = [];
+const GOLD = Math.PI * (3 - Math.sqrt(5));
+for (let i = 0; i < N; i++) {
+  const g = new THREE.Group();
+  const front = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: posterTextures[(i * 3 + (i / COLS | 0)) % designs.length], side: THREE.FrontSide }));
+  const back = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: posterTextures[(i * 5 + 7) % designs.length], side: THREE.FrontSide }));
+  back.rotation.y = Math.PI;
+  g.add(front, back); scene.add(g);
+  // fibonacci sphere direction
+  const fy = 1 - 2 * (i + .5) / N, fr = Math.sqrt(1 - fy * fy), fa = i * GOLD;
+  cards.push({
+    g, col: i % COLS, row: (i / COLS) | 0,
+    dir: new THREE.Vector3(Math.cos(fa) * fr, fy, Math.sin(fa) * fr),
+    delay: rand(), roll: (rand() - .5) * .5,
+  });
+}
+
+/* ================= post: vertical streak + soft cyan/blue split ================= */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const fx = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAmt: { value: 0 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uAmt; varying vec2 vUv;
+    void main(){
+      vec2 d = vec2(0., uAmt) * (.4 + abs(vUv.x - .5) * 1.6);
+      float r = 0., g = 0., b = 0., a = 0.;
+      for (int i = 0; i < 10; i++) {
+        float t = float(i) / 9. - .5;
+        vec4 sr = texture2D(tDiffuse, vUv + d * (t - .5));
+        vec4 sg = texture2D(tDiffuse, vUv + d * t);
+        vec4 sb = texture2D(tDiffuse, vUv + d * (t + .5));
+        r += sr.r * sr.a; g += sg.g * sg.a; b += sb.b * sb.a; a += max(max(sr.a, sg.a), sb.a);
+      }
+      a /= 10.; r /= 10.; g /= 10.; b /= 10.;
+      gl_FragColor = a > .001 ? vec4(vec3(r, g, b) / a, a) : vec4(0.);
+    }`
+});
+composer.addPass(fx);
+composer.addPass(new OutputPass());
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); composer.setSize(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+/* ================= input ================= */
+const lenis = new Lenis({ lerp: .08, wheelMultiplier: .85 });
+const mouse = { x: 0, y: 0, sx: 0, sy: 0 };
+addEventListener('pointermove', e => { mouse.x = e.clientX / innerWidth * 2 - 1; mouse.y = e.clientY / innerHeight * 2 - 1; });
+
+/* ================= DOM refs ================= */
+const scrollEl = document.getElementById('scroll');
+const nav = document.getElementById('nav');
+const meta = document.getElementById('meta');
+const stats = document.getElementById('stats');
+const statNums = [...stats.querySelectorAll('b')];
+const helixcap = document.getElementById('helixcap');
+const part = document.getElementById('part');
+const partLines = [...part.querySelectorAll('.line > span')];
+const partFades = [...part.querySelectorAll('.fade')];
+const ticksEl = document.getElementById('ticks'), TICKS = 64;
+for (let i = 0; i < TICKS; i++) ticksEl.appendChild(document.createElement('i'));
+const tickEls = [...ticksEl.children];
+let railHover = null, railFocus = 0;
+const docMax = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
+const railFrac = e => { const r = ticksEl.getBoundingClientRect(); return clamp((e.clientY - r.top) / r.height); };
+ticksEl.addEventListener('pointermove', e => railHover = railFrac(e));
+ticksEl.addEventListener('pointerleave', () => railHover = null);
+ticksEl.addEventListener('click', e => lenis.scrollTo(railFrac(e) * docMax(), { duration: 1.4 }));
+// fisheye: ticks near the focus grow longer and brighter
+function fisheye(els, focus, axis, base, gain, sigma) {
+  const n = els.length - 1;
+  for (let i = 0; i <= n; i++) {
+    const d = (i / n - focus) * n, f = Math.exp(-(d * d) / (2 * sigma * sigma));
+    els[i].style.transform = `${axis}(${base + f * gain})`;
+    els[i].style.opacity = .28 + f * .72;
+  }
+}
+
+/* ---- v5 hero background: short strokes (or dots) that swell near the pointer ---- */
+const BG_MODE = 'dots';    // 'lines' | 'dots'
+const bgCv = document.getElementById('bgfx'), bgx = bgCv.getContext('2d');
+const bgMouse = { x: -1e4, y: -1e4, sx: -1e4, sy: -1e4 };
+addEventListener('pointermove', e => { bgMouse.x = e.clientX; bgMouse.y = e.clientY; });
+document.addEventListener('pointerleave', () => { bgMouse.x = bgMouse.y = -1e4; });
+function sizeBg() { const d = Math.min(devicePixelRatio, 2); bgCv.width = innerWidth * d; bgCv.height = innerHeight * d; }
+sizeBg(); addEventListener('resize', sizeBg);
+function drawBg(t, alpha) {
+  const d = bgCv.width / innerWidth, W = bgCv.width, H = bgCv.height;
+  bgx.clearRect(0, 0, W, H);
+  if (alpha <= 0) return;
+  if (bgMouse.x < -1e3) { bgMouse.sx = -1e4; bgMouse.sy = -1e4; }
+  else if (bgMouse.sx < -1e3) { bgMouse.sx = bgMouse.x; bgMouse.sy = bgMouse.y; }
+  else { bgMouse.sx = lerp(bgMouse.sx, bgMouse.x, .14); bgMouse.sy = lerp(bgMouse.sy, bgMouse.y, .14); }
+  const gap = 26, R = 170, mx = bgMouse.sx, my = bgMouse.sy;
+  bgx.globalAlpha = alpha;
+  for (let y = gap / 2; y < innerHeight; y += gap) for (let x = gap / 2; x < innerWidth; x += gap) {
+    const dist = Math.hypot(x - mx, y - my);
+    const f = dist < R ? Math.pow(1 - dist / R, 2) : 0;
+    const wave = .5 + .5 * Math.sin(t * .9 - (x + y) * .006);
+    const a = .07 + wave * .03 + f * .5;
+    bgx.fillStyle = `rgba(${lerp(11, 92, f) | 0},${lerp(20, 99, f) | 0},${lerp(51, 120, f) | 0},${a})`;  // grey on hover
+    if (BG_MODE === 'lines') { const h = 5 + f * 13; bgx.fillRect((x - .5) * d, (y - h / 2) * d, 1 * d, h * d); }
+    else { bgx.beginPath(); bgx.arc(x * d, y * d, (.9 + f * 2.1) * d, 0, 6.283); bgx.fill(); }
+  }
+  bgx.globalAlpha = 1;
+}
+
+/* ================= scratch objects ================= */
+const M = new THREE.Matrix4(), ORIGIN = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
+const vS = new THREE.Vector3(), vH = new THREE.Vector3(), vW = new THREE.Vector3(), tmp = new THREE.Vector3();
+const qS = new THREE.Quaternion(), qH = new THREE.Quaternion(), qW = new THREE.Quaternion(), qT = new THREE.Quaternion(), qFlip = new THREE.Quaternion();
+const sphereRot = new THREE.Quaternion(), wallBase = new THREE.Quaternion(), eul = new THREE.Euler();
+const Y = new THREE.Vector3(0, 1, 0);
+const viewW = z => 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (camera.position.z - z) * camera.aspect;
+
+let lastP = 0, vel = 0, glitch = 0, lastInput = 0;
+['wheel', 'touchmove', 'keydown'].forEach(ev => addEventListener(ev, () => lastInput = performance.now(), { passive: true }));
+const clock = new THREE.Clock();
+
+function frame(time) {
+  lenis.raf(time);
+  const t = clock.getElapsedTime();
+  const max = scrollEl.offsetHeight - innerHeight;
+  const p = clamp(scrollY / max);
+  vel = lerp(vel, (p - lastP) * 60, .15); lastP = p;
+  mouse.sx = lerp(mouse.sx, mouse.x, .05); mouse.sy = lerp(mouse.sy, mouse.y, .05);
+  const narrow = innerWidth < 860;
+  const vw = viewW(0);
+
+  /* ---- phases ---- */
+  const toHelix = range(p, .05, .30);   // sphere -> double helix
+  const toWall  = range(p, .40, .60);   // helix  -> flat wall (right side)
+  const flip    = range(p, .70, .86);   // diagonal flip wave across the wall
+  const endP    = range(p, .90, 1);     // wall centres and fills the view
+
+  /* sphere */
+  const breathe = 1 + Math.sin(t * .8) * .015;
+  const Rs = (narrow ? 2.6 : 3.5) * breathe * (1 + toHelix * .2);
+  eul.set(.25 + mouse.sy * .25, t * .12 + p * 3 + mouse.sx * .5, 0);
+  sphereRot.setFromEuler(eul);
+
+  /* helix */
+  const helixSpin = t * .25 + p * 9;
+  const helixRise = lerp(-1, 3, range(p, .1, .5));
+  const Rh = narrow ? 2 : 2.7;
+
+  /* wall */
+  const wx = narrow ? 0 : lerp(vw * .2, 0, ease(endP));
+  const wy = narrow ? 1.4 : lerp(0, .2, endP);
+  const ws = lerp(narrow ? .52 : .78, 1.25, ease(endP));
+  eul.set(.05 + mouse.sy * .06, lerp(-.42, -.12, ease(endP)) + mouse.sx * .08, lerp(.04, 0, endP));
+  wallBase.setFromEuler(eul);
+  const wallDrift = Math.sin(t * .3) * .08;
+
+  cards.forEach((c, i) => {
+    /* --- sphere state --- */
+    vS.copy(c.dir).multiplyScalar(Rs).applyQuaternion(sphereRot);
+    vS.y -= .2;
+    M.lookAt(tmp.copy(c.dir), ORIGIN, UP); qS.setFromRotationMatrix(M).premultiply(sphereRot);
+    qT.setFromAxisAngle(tmp.set(0, 0, 1), c.roll); qS.multiply(qT);
+
+    /* --- helix state --- */
+    const strand = i % 2, u = (i >> 1) / (N / 2);
+    const a = u * Math.PI * 4 + strand * Math.PI + helixSpin;
+    const hy = (u - .5) * 13 + helixRise;
+    vH.set(Math.sin(a) * Rh, hy, Math.cos(a) * Rh);
+    M.lookAt(tmp.set(Math.sin(a), 0, Math.cos(a)), ORIGIN, UP); qH.setFromRotationMatrix(M);
+    qT.setFromAxisAngle(tmp.set(1, 0, 0), -.25); qH.multiply(qT);
+
+    /* --- wall state --- */
+    const cx = c.col - (COLS - 1) / 2, cy = (ROWS - 1) / 2 - c.row;
+    vW.set(cx * 1.1 * ws, cy * CARD_H * 1.08 * ws + wallDrift * (c.col % 2 ? 1 : -1), 0).applyQuaternion(wallBase);
+    vW.x += wx; vW.y += wy;
+    const fk = easeOutBack(clamp(flip * 2.2 - (c.col + c.row) / (COLS + ROWS) * 1.2));
+    qFlip.setFromAxisAngle(Y, Math.PI * fk);
+    qW.copy(wallBase).multiply(qFlip);
+
+    /* --- blend --- */
+    const k1 = ease(clamp(toHelix * 1.4 - (1 - (c.dir.y + 1) / 2) * .4));       // top of the sphere goes first
+    const k2 = ease(clamp(toWall * 1.6 - ((hy + 7) / 14) * .6));                  // helix unspools top-down
+
+    const pos = c.g.position.lerpVectors(vS, vH, k1).lerp(vW, k2);
+    pos.z += Math.sin(k2 * Math.PI) * 2.2 + Math.sin(fk * Math.PI) * .6;         // swoop toward camera / lift during flip
+    c.g.quaternion.slerpQuaternions(qS, qH, k1).slerp(qW, k2);
+    c.g.scale.setScalar(lerp(lerp(narrow ? .6 : .78, .82, k1), ws, k2));
+  });
+
+  /* ---- post fx strength ---- */
+  /* v4 glitch: grows with scroll speed (non-linear), dies fast once input stops */
+  const lv = lenis.velocity || 0;
+  let gTarget = Math.sign(lv) * Math.min(.022, Math.pow(Math.max(0, Math.abs(lv) - 4) / 60, 1.35) * .022);
+  if (performance.now() - lastInput > 90) gTarget = 0;
+  glitch = lerp(glitch, gTarget, Math.abs(gTarget) > Math.abs(glitch) ? .3 : .3);
+  if (Math.abs(glitch) < .0003) glitch = 0;
+  fx.uniforms.uAmt.value = glitch;
+
+  /* ---- hero copy: letters tip backwards ---- */
+  const heroOut = range(p, 0, .08);
+  const total = heroChars.length;
+  heroChars.forEach(({ el, i }) => {
+    const k = easeOut(clamp(heroOut * 2 - (i / total) * 1));
+    el.style.opacity = 1 - k;
+    el.style.transform = `translateY(${-k * 30}px) rotateX(${k * 95}deg)`;
+  });
+  const metaK = 1 - range(p, 0, .04);
+  meta.style.opacity = metaK;
+  nav.classList.toggle('hide', p > .04 && scrollY < max + innerHeight * .6);
+
+  /* ---- helix captions + counters ---- */
+  const sIn = range(p, .2, .27), sOut = range(p, .39, .44), sK = sIn * (1 - sOut);
+  stats.style.opacity = sK; stats.style.transform = `translateY(${(1 - sIn) * 20 - sOut * 20}px)`;
+  helixcap.style.opacity = sK; helixcap.style.transform = `translateY(${(1 - sIn) * 20 - sOut * 20}px)`;
+  const cnt = easeOut(range(p, .2, .36));
+  statNums.forEach(b => b.textContent = Math.round(+b.dataset.to * cnt).toLocaleString('en-US'));
+
+  /* ---- wall copy ---- */
+  const inP = range(p, .56, .68), outP = range(p, .9, .96);
+  partLines.forEach((el, i) => {
+    const k = easeOut(clamp(inP * 1.6 - i * .2)) * (1 - easeOut(clamp(outP * 1.6 - i * .2)));
+    el.style.transform = `translateY(${(1 - k) * (outP > 0 ? -110 : 110)}%) rotate(${(1 - k) * (outP > 0 ? -3 : 4)}deg)`;
+    el.style.opacity = k;
+  });
+  partFades.forEach((el, i) => {
+    const k = clamp(inP * 1.5 - .3 - i * .12) * (1 - clamp(outP * 2));
+    el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * 14}px)`;
+  });
+
+  /* ---- ticks (whole page) ---- */
+  const gp = scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight);
+  railFocus = lerp(railFocus, railHover ?? gp, .18);
+  fisheye(tickEls, railFocus, 'scaleX', .42, .58, 2.4);
+  drawBg(t, (1 - range(p, .02, .09)) * (scrollY < max ? 1 : 0));
+
+  if (scrollY < max + innerHeight) composer.render();
+  requestAnimationFrame(frame);
+}
+
+/* =====================================================================
+   v3 — sections after the hero (GSAP ScrollTrigger + Flip, driven by Lenis)
+   ===================================================================== */
+gsap.registerPlugin(ScrollTrigger, Flip);
+lenis.on('scroll', ScrollTrigger.update);
+
+/* ---- posters drawn into DOM canvases (same generator as the 3D cards) ---- */
+function paint(cv, di) {
+  cv.width = CW; cv.height = CH;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const draw = () => drawPoster(ctx, designs[di], designImgs[di] || null);
+  draw();
+  if (!designImgs[di]) imgWaiters[di].push(draw);
+  document.fonts && document.fonts.ready.then(draw);
+}
+
+/* ---- (03) featured data ---- */
+const featured = [
+  { d: 0,  t: 'Deep Field',   by: 'Mira Okafor',       city: 'Lagos',       y: 2026, tech: 'Screen print', cat: 'abstract', q: 'I wanted the dark to feel generous, not empty.' },
+  { d: 4,  t: 'Quiet Voices', by: 'Oksana Hrytsenko',  city: 'Kyiv',        y: 2026, tech: 'Offset',       cat: 'type',     q: 'Written for the people who never get the microphone.' },
+  { d: 1,  t: 'Tide',         by: 'Joon Park',         city: 'Busan',       y: 2025, tech: 'Risograph',    cat: 'photo',    q: 'My grandmother counted days by the water line.' },
+  { d: 5,  t: 'B',            by: 'Felix Brandt',      city: 'Berlin',      y: 2026, tech: 'Letterpress',  cat: 'type',     q: 'One letter, set by hand, printed four hundred times.' },
+  { d: 3,  t: 'Blue Hour',    by: 'Studio Halde',      city: 'Oslo',        y: 2025, tech: 'Screen print', cat: 'abstract', q: 'The twenty minutes when the whole city is the same colour.' },
+  { d: 9,  t: 'Glass',        by: 'Léa Moreau',        city: 'Lyon',        y: 2026, tech: 'Inkjet',       cat: 'photo',    q: 'Shot through my neighbour’s window, with permission.' },
+  { d: 6,  t: 'Undertow',     by: 'Ana Ruiz',          city: 'Mexico City', y: 2026, tech: 'Risograph',    cat: 'abstract', q: 'Sixteen lines, sixteen people who left the same town.' },
+  { d: 13, t: 'Ø',            by: 'Nora Lind',         city: 'Bergen',      y: 2025, tech: 'Offset',       cat: 'type',     q: 'A letter that most of the world cannot type.' },
+  { d: 8,  t: 'Indigo',       by: 'Kenji Sato',        city: 'Tokyo',       y: 2026, tech: 'Cyanotype',    cat: 'photo',    q: 'Printed by the sun on my balcony, one hour each.' },
+  { d: 11, t: 'Kobalt 27',    by: 'Studio Vær',        city: 'Copenhagen',  y: 2026, tech: 'Screen print', cat: 'abstract', q: 'A target for attention, then a place to rest it.' },
+  { d: 2,  t: 'Azul',         by: 'Inês Duarte',       city: 'Lisbon',      y: 2025, tech: 'Offset',       cat: 'photo',    q: 'The tiles outside my school, from memory.' },
+  { d: 12, t: 'Wave Form',    by: 'Tomás Vega',        city: 'Bogotá',      y: 2026, tech: 'Letterpress',  cat: 'type',     q: 'A protest chant, drawn as a sound wave.' },
+];
+const grid = document.getElementById('grid');
+grid.innerHTML = featured.map((f, i) => `
+  <article class="fcard" data-cat="${f.cat}">
+    <div class="inner">
+      <div class="face front"><canvas class="poster" data-d="${f.d}"></canvas></div>
+      <div class="face back">
+        <div><span>№ ${String(i + 1).padStart(3, '0')}</span><h4>${f.t}</h4></div>
+        <q>${f.q}</q>
+        <dl><dt>By</dt><dd>${f.by}</dd><dt>City</dt><dd>${f.city}</dd><dt>Year</dt><dd>${f.y}</dd><dt>Print</dt><dd>${f.tech}</dd></dl>
+      </div>
+    </div>
+    <div class="cap"><span>${f.t}</span><span>${f.city}</span></div>
+  </article>`).join('');
+document.querySelectorAll('canvas.poster').forEach(cv => paint(cv, +cv.dataset.d));
+
+/* ---- generic reveals ---- */
+gsap.utils.toArray('.reveal').forEach(el => gsap.from(el, {
+  y: 26, opacity: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 88%' }
+}));
+gsap.utils.toArray('.sec .h2, .room-intro .h2').forEach(h => gsap.from(h.querySelectorAll('.mask > span'), {
+  yPercent: 112, rotate: 3, duration: 1.2, stagger: .09, ease: 'power4.out', scrollTrigger: { trigger: h, start: 'top 85%' }
+}));
+
+/* ---- (01) manifesto: words ink in as you read ---- */
+const mtext = document.getElementById('mtext');
+mtext.innerHTML = mtext.textContent.split(' ').map(w => `<span class="w">${w}</span>`).join(' ');
+gsap.to(mtext.querySelectorAll('.w'), {
+  color: '#0b1433', stagger: .12, ease: 'none',
+  scrollTrigger: { trigger: mtext, start: 'top 78%', end: 'bottom 42%', scrub: true }
+});
+gsap.utils.toArray('.floater').forEach(el => {
+  // v6: bigger, clearly visible travel — each poster moves in its own empty lane
+  const d = el.dataset;
+  gsap.fromTo(el, { y: +d.y0, x: -d.x, rotate: -d.r, scale: .9 }, {
+    y: +d.y1, x: +d.x, rotate: +d.r, scale: 1.08, ease: 'none',
+    scrollTrigger: { trigger: '.manifesto', start: 'top bottom', end: 'bottom top', scrub: .6 }
+  });
+});
+
+/* ---- marquee: drifts on its own, speeds up and reverses with scroll ---- */
+const mrow = document.querySelector('.marquee .row');
+let mx = 0, mdir = -1;
+gsap.ticker.add(() => {
+  const v = lenis.velocity || 0;
+  if (Math.abs(v) > .5) mdir = v > 0 ? -1 : 1;
+  mx += mdir * (.6 + Math.min(Math.abs(v), 40) * .18);
+  const half = mrow.scrollWidth / 2;
+  if (mx <= -half) mx += half; if (mx > 0) mx -= half;
+  mrow.style.transform = `translate3d(${mx}px,0,0) skewX(${clamp(-v * .25, -8, 8)}deg)`;
+});
+
+/* ---- (02) rooms: pinned horizontal walk ---- */
+const track = document.getElementById('track');
+const roomsRuler = document.getElementById('roomsRuler');
+for (let i = 0; i < 96; i++) roomsRuler.appendChild(document.createElement('i'));
+const rulerEls = [...roomsRuler.children];
+fisheye(rulerEls, 0, 'scaleY', .3, .7, 3);
+const roomsNum = document.getElementById('roomsNum');
+const hDist = () => track.scrollWidth - innerWidth;
+const hTween = gsap.to(track, {
+  x: () => -hDist(), ease: 'none',
+  scrollTrigger: {
+    trigger: '#rooms', start: 'top top', end: () => '+=' + hDist() * 1.1, pin: true, scrub: 1, invalidateOnRefresh: true,
+    onUpdate: s => {
+      fisheye(rulerEls, s.progress, 'scaleY', .3, .7, 3);
+      roomsNum.textContent = `0${1 + Math.min(3, Math.floor(s.progress * 4.2))} / 04`;
+    }
+  }
+});
+gsap.utils.toArray('.room').forEach(room => {
+  const card = room.querySelector('.room-card'), info = room.querySelector('.room-info');
+  gsap.fromTo(card, { rotateY: -38, rotateZ: -5, scale: .78, opacity: .25 }, {
+    rotateY: 0, rotateZ: 0, scale: 1, opacity: 1, ease: 'none',
+    scrollTrigger: { trigger: room, containerAnimation: hTween, start: 'left 100%', end: 'left 45%', scrub: true }
+  });
+  gsap.fromTo(card, { rotateY: 0, scale: 1 }, {
+    rotateY: 30, scale: .9, ease: 'none', immediateRender: false,
+    scrollTrigger: { trigger: room, containerAnimation: hTween, start: 'right 35%', end: 'right -5%', scrub: true }
+  });
+  gsap.from(info.children, {
+    y: 50, opacity: 0, stagger: .1, ease: 'none',
+    scrollTrigger: { trigger: room, containerAnimation: hTween, start: 'left 80%', end: 'left 40%', scrub: true }
+  });
+  // pointer tilt
+  const tilt = card.querySelector('.tilt');
+  card.addEventListener('pointermove', e => {
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+    tilt.style.transform = `rotateY(${x * 18}deg) rotateX(${-y * 14}deg) translateZ(20px)`;
+  });
+  card.addEventListener('pointerleave', () => tilt.style.transform = '');
+});
+
+/* ---- (03) featured: cards rise in, flip on hover, Flip-filter ---- */
+const fcards = gsap.utils.toArray('.fcard');
+gsap.set(fcards, { opacity: 0, y: 90, rotateX: -22, transformPerspective: 1000 });
+ScrollTrigger.batch(fcards, {
+  start: 'top 92%', once: true,
+  onEnter: batch => gsap.to(batch, { opacity: 1, y: 0, rotateX: 0, duration: 1.1, stagger: .09, ease: 'power3.out' })
+});
+fcards.forEach(c => c.addEventListener('click', () => { if (matchMedia('(hover: none)').matches) c.classList.toggle('flipped'); }));
+
+document.getElementById('filters').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.classList.contains('on')) return;
+  document.querySelectorAll('#filters button').forEach(x => x.classList.toggle('on', x === b));
+  const f = b.dataset.f;
+  const state = Flip.getState(fcards, { props: 'opacity' });
+  fcards.forEach(c => c.style.display = (f === 'all' || c.dataset.cat === f) ? '' : 'none');
+  gsap.set(fcards, { opacity: 1, y: 0, rotateX: 0 });
+  Flip.from(state, {
+    duration: .85, ease: 'power3.inOut', stagger: .03, absolute: true, scale: true,
+    onEnter: els => gsap.fromTo(els, { opacity: 0, scale: .7, rotate: -4 }, { opacity: 1, scale: 1, rotate: 0, duration: .7, delay: .2, ease: 'power3.out' }),
+    onLeave: els => gsap.to(els, { opacity: 0, scale: .7, rotate: 4, duration: .45, ease: 'power2.in' }),
+    onComplete: () => ScrollTrigger.refresh()
+  });
+});
+
+
+/* =====================================================================
+   v4 — (04) world map · (05) open call · (06) jury
+   ===================================================================== */
+
+/* ---- (04) world — v7: a mosaic of tiny posters that grows outward from Rotterdam ---- */
+const CITIES = [
+  ['Rotterdam', 51.9, 4.5, 31], ['Lagos', 6.5, 3.4, 48], ['Kyiv', 50.4, 30.5, 44], ['São Paulo', -23.5, -46.6, 41], ['Tokyo', 35.7, 139.7, 39],
+  ['Mexico City', 19.4, -99.1, 36], ['Berlin', 52.5, 13.4, 34], ['Lisbon', 38.7, -9.1, 22], ['Oslo', 59.9, 10.7, 18],
+  ['Busan', 35.1, 129.0, 21], ['Bogotá', 4.7, -74.1, 25], ['Nairobi', -1.3, 36.8, 27], ['Cape Town', -33.9, 18.4, 16],
+  ['Cairo', 30.0, 31.2, 20], ['Mumbai', 19.1, 72.9, 33], ['Jakarta', -6.2, 106.8, 17], ['Melbourne', -37.8, 145.0, 14],
+  ['Seoul', 37.6, 127.0, 24], ['New York', 40.7, -74.0, 29], ['Buenos Aires', -34.6, -58.4, 26], ['Istanbul', 41.0, 29.0, 23],
+  ['Reykjavík', 64.1, -21.9, 6], ['Dakar', 14.7, -17.4, 14], ['Taipei', 25.0, 121.6, 16], ['Los Angeles', 34.1, -118.2, 21],
+];
+const LABELLED = new Set(['Rotterdam', 'Lagos', 'Kyiv', 'São Paulo', 'Tokyo', 'Mexico City']);
+const mapCv = document.getElementById('map'), mctx = mapCv.getContext('2d');
+const LAT_TOP = 78, LAT_BOT = -56, MAP_AR = 2.25;
+const proj = (lat, lon) => [(lon + 180) / 360, (LAT_TOP - lat) / (LAT_TOP - LAT_BOT)];
+const TILE_COLS = 118, TILE_ROWS = Math.round(TILE_COLS * .72 / MAP_AR);
+const TILE_PAL = ['#1f45e6', '#3a5cff', '#6fa3ff', '#38c6ff', '#dfe7ff', '#2a3d8f'];
+const TILE_W = [.26, .14, .22, .1, .14, .14];
+let tiles = [], cityPts = [], mapP = 0, mapPs = 0, mapHover = -1;
+const [RU, RV] = proj(51.9, 4.5);
+
+function buildTiles(landCanvas) {
+  tiles = TILE_PAL.map(() => []);
+  const data = landCanvas ? landCanvas.getContext('2d').getImageData(0, 0, landCanvas.width, landCanvas.height).data : null;
+  const W = landCanvas ? landCanvas.width : 1, H = landCanvas ? landCanvas.height : 1;
+  for (let r = 0; r < TILE_ROWS; r++) for (let c = 0; c < TILE_COLS; c++) {
+    const u = (c + .5) / TILE_COLS, v = (r + .5) / TILE_ROWS;
+    const land = data ? data[((v * H | 0) * W + (u * W | 0)) * 4 + 3] > 100 : false;
+    if (!land) continue;
+    let x = Math.random(), ci = 0; while (x > TILE_W[ci] && ci < TILE_W.length - 1) { x -= TILE_W[ci]; ci++; }
+    const dist = Math.hypot((u - RU) * MAP_AR, v - RV);
+    tiles[ci].push({ u, v, a: .55 + Math.random() * .45, dist, j: Math.random() * .08 });
+  }
+  cityPts = CITIES.map(([name, lat, lon, n], i) => { const [u, v] = proj(lat, lon); return { name, u, v, n, d: i % designs.length, dist: Math.hypot((u - RU) * MAP_AR, v - RV), label: LABELLED.has(name) }; });
+}
+async function loadLand() {
+  try {
+    const topo = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json').then(r => r.json());
+    const land = topojson.feature(topo, topo.objects.land);
+    const c = document.createElement('canvas'); c.width = 900; c.height = 400;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.fillStyle = '#000';
+    const polys = land.features.flatMap(f => f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates);
+    polys.forEach(poly => {
+      x.beginPath();
+      poly.forEach(ring => ring.forEach(([lon, lat], j) => { const [u, v] = proj(lat, lon); j ? x.lineTo(u * c.width, v * c.height) : x.moveTo(u * c.width, v * c.height); }));
+      x.fill('evenodd');
+    });
+    buildTiles(c);
+  } catch (e) { buildTiles(null); }
+}
+buildTiles(null); loadLand();
+
+function sizeMap() {
+  const r = mapCv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio, 2);
+  mapCv.width = r.width * dpr; mapCv.height = r.height * dpr;
+}
+sizeMap(); addEventListener('resize', sizeMap);
+const mapRect = () => { const W = mapCv.width, H = mapCv.height, aw = W * .9, ah = H * .58, mw = Math.min(aw, ah * MAP_AR), mh = mw / MAP_AR; return { W, H, mw, mh, ox: (W - mw) / 2, oy: H * .3 + (ah - mh) / 2 }; };
+
+const worldNum = document.getElementById('worldNum');
+ScrollTrigger.create({ trigger: '#world', start: 'top top', end: '+=120%', pin: true, scrub: true, onUpdate: s => mapP = s.progress });
+// page-wide theme flip, like a light switch, while the map is the main thing on screen
+ScrollTrigger.create({
+  trigger: '#world', start: 'top 55%', end: () => '+=' + innerHeight * 2.3,
+  onToggle: s => document.body.dataset.theme = s.isActive ? 'dark' : 'light'
+});
+
+const mapMouse = { x: -1e4, y: -1e4, sx: -1e4, sy: -1e4 };
+const tip = document.getElementById('mapTip'), tipCity = document.getElementById('tipCity'), tipInfo = document.getElementById('tipInfo');
+const tipCanvas = tip.querySelector('canvas');
+mapCv.addEventListener('pointermove', e => {
+  const b = mapCv.getBoundingClientRect(), sc = mapCv.width / b.width;
+  mapMouse.x = (e.clientX - b.left) * sc; mapMouse.y = (e.clientY - b.top) * sc;
+  if (mapMouse.sx < -1e3) { mapMouse.sx = mapMouse.x; mapMouse.sy = mapMouse.y; }
+  const R = mapRect();
+  let best = -1, bd = 1e9;
+  cityPts.forEach((c, i) => { const d = Math.hypot(R.ox + c.u * R.mw - mapMouse.x, R.oy + c.v * R.mh - mapMouse.y) / sc; if (d < bd) { bd = d; best = i; } });
+  if (bd < 20 && mapPs > .7) {
+    if (best !== mapHover) {
+      const c = cityPts[best];
+      tipCity.textContent = c.name; tipInfo.textContent = c.name === 'Rotterdam' ? 'where the wall began' : `${c.n} posters on the wall`;
+      paint(tipCanvas, c.d);
+      tip.style.left = (R.ox + c.u * R.mw) / R.W * 100 + '%'; tip.style.top = (R.oy + c.v * R.mh) / R.H * 100 + '%';
+    }
+    mapHover = best; tip.classList.add('on'); mapCv.style.cursor = 'pointer';
+  } else { mapHover = -1; tip.classList.remove('on'); mapCv.style.cursor = ''; }
+});
+mapCv.addEventListener('pointerleave', () => { mapHover = -1; tip.classList.remove('on'); mapMouse.x = mapMouse.y = -1e4; });
+
+let mapVisible = false;
+new IntersectionObserver(([en]) => mapVisible = en.isIntersecting).observe(mapCv);
+gsap.ticker.add((time, dtMs) => {
+  if (!mapVisible) return;
+  mapPs = lerp(mapPs, mapP, 1 - Math.exp(-(dtMs || 16) / 1000 * 7));
+  worldNum.textContent = Math.round(64 * easeOut(range(mapPs, .05, .8)));
+  const { W, H, mw, mh, ox, oy } = mapRect(), cw = mw / TILE_COLS, ch = mh / TILE_ROWS;
+  const tw = cw * .74, th = ch * .8, R = cw * 9;
+  if (mapMouse.x < -1e3) { mapMouse.sx = -1e4; mapMouse.sy = -1e4; }
+  else { mapMouse.sx = lerp(mapMouse.sx, mapMouse.x, .2); mapMouse.sy = lerp(mapMouse.sy, mapMouse.y, .2); }
+  mctx.clearRect(0, 0, W, H);
+  const wave = mapPs * 1.5;                 // the growth front, measured from Rotterdam
+  tiles.forEach((list, ci) => {
+    mctx.fillStyle = TILE_PAL[ci];
+    for (const t of list) {
+      const k = easeOutBack(clamp((wave - t.dist - t.j) * 4));
+      if (k <= 0) continue;
+      const x = ox + t.u * mw, y = oy + t.v * mh;
+      const dd = Math.hypot(x - mapMouse.sx, y - mapMouse.sy), f = dd < R ? Math.pow(1 - dd / R, 2) : 0;
+      const sc = 1 + f * .9, h = th * k * sc, w = tw * sc;
+      mctx.globalAlpha = Math.min(1, t.a + f * .6);
+      mctx.fillRect(x - w / 2, y - h / 2 - f * ch * .6, w, h);   // tiles "flip" open and lift toward the pointer
+    }
+  });
+  mctx.globalAlpha = 1;
+  const s = mw / 1400;
+  mctx.font = `400 ${12 * s * 1.6}px Inter, sans-serif`;
+  cityPts.forEach((c, i) => {
+    const k = easeOut(clamp((wave - c.dist - .05) * 3));
+    if (k <= 0) return;
+    const x = ox + c.u * mw, y = oy + c.v * mh, hov = i === mapHover;
+    const pulse = (time * .5 + i * .37) % 1;
+    mctx.strokeStyle = `rgba(255,255,255,${(1 - pulse) * .5 * k})`; mctx.lineWidth = 1.2 * s * 1.6;
+    const pw = tw * (1.6 + pulse * 2.4), ph = th * (1.6 + pulse * 2.4);
+    mctx.strokeRect(x - pw / 2, y - ph / 2, pw, ph);
+    mctx.fillStyle = '#fff';
+    const sz = (hov ? 1.9 : 1.35) * k;
+    mctx.fillRect(x - tw * sz / 2, y - th * sz / 2, tw * sz, th * sz);
+    if (c.label && mapPs > .55) {
+      mctx.globalAlpha = clamp((mapPs - .55) * 5) * .85;
+      mctx.fillText(c.name, x + tw * 1.6, y + 4 * s);
+      mctx.globalAlpha = 1;
+    }
+  });
+});
+
+/* ---- (05) jury v6: calm cursors gliding over one clean row of posters ---- */
+const JURY = [
+  ['Amara', 'Amara Eze · Lagos', 'ideas you can read from across the street', '#1f45e6', '#fff'],
+  ['Yuki', 'Yuki Tanabe · Tokyo', 'the poster that knows when to stop', '#0b1433', '#fff'],
+  ['Olena', 'Olena Marchuk · Kyiv', 'letters that carry a voice', '#6fa3ff', '#0b1433'],
+  ['Rafael', 'Rafael Couto · São Paulo', 'ink you can almost smell', '#c9d3ff', '#0b1433'],
+  ['Ingrid', 'Ingrid Solberg · Oslo', 'a colour nobody else would choose', '#38c6ff', '#0b1433'],
+  ['Diego', 'Diego Llano · Mexico City', 'humour — walls are serious enough', '#5b6683', '#fff'],
+];
+const field = document.getElementById('field');
+const jps = [...field.querySelectorAll('.jp')];
+const arrow = c => `<svg viewBox="0 0 14 20"><path d="M1 1 L1 16 L5 12.4 L8 18.6 L10.6 17.4 L7.7 11.3 L13 11.3 Z" fill="${c}" stroke="#fff" stroke-width="1"/></svg>`;
+const curs = JURY.map(([n, full, look, c, fg], i) => {
+  const el = document.createElement('div');
+  el.className = 'cur'; el.style.setProperty('--c', c); el.style.setProperty('--fg', fg);
+  el.innerHTML = `${arrow(c)}<span class="pill"><b>${n}</b><em>${full} — looks for ${look}</em></span>`;
+  field.appendChild(el);
+  return { el, n, x: 0, y: 0, target: -1, seed: Math.random() * 10 };
+});
+const me = document.createElement('div');
+me.className = 'cur me'; me.style.setProperty('--c', '#0b1433'); me.style.setProperty('--fg', '#fff');
+me.innerHTML = `${arrow('#0b1433')}<span class="pill"><b>You</b></span>`;
+field.appendChild(me);
+const meP = { x: -999, y: -999, on: false };
+field.addEventListener('pointermove', e => { const r = field.getBoundingClientRect(); meP.x = e.clientX - r.left; meP.y = e.clientY - r.top; meP.on = true; });
+field.addEventListener('pointerleave', () => meP.on = false);
+
+const taken = new Set();
+function wander(c) {
+  const fr = field.getBoundingClientRect();
+  taken.delete(c.target);
+  let free = jps.map((_, i) => i).filter(i => i !== c.target && !taken.has(i));
+  if (!free.length) free = jps.map((_, i) => i).filter(i => i !== c.target);   // every poster is busy — share one
+  c.target = free[Math.random() * free.length | 0]; taken.add(c.target);
+  const r = jps[c.target].getBoundingClientRect();
+  gsap.to(c, {
+    x: r.left - fr.left + r.width * (.3 + Math.random() * .4),
+    y: r.top - fr.top + r.height * (.3 + Math.random() * .45),
+    duration: 1.8 + Math.random() * 1.4, ease: 'power2.inOut',
+    onComplete: () => {
+      const p = jps[c.target];
+      p.classList.add('picked'); setTimeout(() => p.classList.remove('picked'), 1300);
+      gsap.delayedCall(1.4 + Math.random() * 2.2, () => wander(c));
+    }
+  });
+}
+
+ScrollTrigger.create({
+  trigger: field, start: 'top 80%', once: true,
+  onEnter: () => {
+    gsap.fromTo(jps, { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 1.1, stagger: .08, ease: 'power3.out' });
+    const fw = field.clientWidth, fh = field.clientHeight;
+    curs.forEach((c, i) => {
+      c.x = (i % 2 ? fw + 40 : -40); c.y = fh * (.2 + (i / curs.length) * .7);
+      gsap.delayedCall(.4 + i * .3, () => wander(c));
+    });
+  }
+});
+let fieldVis = false;
+new IntersectionObserver(([en]) => fieldVis = en.isIntersecting).observe(field);
+gsap.ticker.add(t => {
+  if (!fieldVis) return;
+  curs.forEach(c => {
+    const jx = Math.sin(t * 1.1 + c.seed) * 1.2, jy = Math.cos(t * .9 + c.seed * 2) * 1.2;
+    c.el.style.transform = `translate3d(${c.x + jx}px,${c.y + jy}px,0)`;
+    c.el.classList.toggle('near', meP.on && Math.hypot(meP.x - c.x, meP.y - c.y) < 100);
+  });
+  me.style.opacity = meP.on ? 1 : 0;
+  me.style.transform = `translate3d(${meP.x}px,${meP.y}px,0)`;
+});
+
+
+/* =====================================================================
+   v7 — manifesto facts · (06) program · (07) numbers · (08) voices · (09) faq · paste CTA · printed footer
+   ===================================================================== */
+
+/* ---- manifesto facts: rules draw, text rises ---- */
+gsap.utils.toArray('.facts > div').forEach((el, i) => {
+  const tl = gsap.timeline({ scrollTrigger: { trigger: '.facts', start: 'top 85%' } });
+  tl.fromTo(el.querySelector('i'), { scaleX: 0 }, { scaleX: 1, duration: 1.1, ease: 'power3.inOut', delay: i * .12 })
+    .from([el.querySelector('span'), el.querySelector('p')], { y: 18, opacity: 0, duration: .9, stagger: .08, ease: 'power3.out' }, '-=.6');
+});
+
+/* ---- (06) program: rows draw in, poster preview follows the pointer ---- */
+gsap.utils.toArray('.ev').forEach((ev, i) => {
+  const tl = gsap.timeline({ scrollTrigger: { trigger: ev, start: 'top 90%' } });
+  tl.fromTo(ev.querySelector('.rule'), { scaleX: 0 }, { scaleX: 1, duration: 1, ease: 'power3.inOut' })
+    .from(ev.querySelectorAll(':scope > *:not(.rule)'), { y: 26, opacity: 0, duration: .8, stagger: .05, ease: 'power3.out' }, '-=.7');
+});
+const preview = document.getElementById('preview'), pin = preview.querySelector('.in'), pcv = preview.querySelector('canvas');
+const pv = { x: 0, y: 0, tx: 0, ty: 0, on: false, cur: -1 };
+document.querySelectorAll('.ev').forEach(ev => {
+  ev.addEventListener('pointerenter', () => { const d = +ev.dataset.d; if (d !== pv.cur) { paint(pcv, d); pv.cur = d; } pv.on = true; preview.classList.add('on'); });
+  ev.addEventListener('pointerleave', () => { pv.on = false; preview.classList.remove('on'); });
+  ev.querySelector('.remind').addEventListener('click', e => { const b = e.currentTarget; b.classList.toggle('on'); b.textContent = b.classList.contains('on') ? 'Reminder set ✓' : 'Remind me'; });
+});
+addEventListener('pointermove', e => { pv.tx = e.clientX + 28; pv.ty = e.clientY - 110; if (!pv.on && pv.x === 0) { pv.x = pv.tx; pv.y = pv.ty; } });
+gsap.ticker.add(() => {
+  if (!pv.on && !preview.classList.contains('on')) return;
+  const dx = pv.tx - pv.x; pv.x += dx * .16; pv.y += (pv.ty - pv.y) * .16;
+  preview.style.left = pv.x + 'px'; preview.style.top = pv.y + 'px';
+  pin.style.transform = `rotate(${clamp(dx * .08, -14, 14)}deg)`;
+});
+
+/* ---- (07) numbers: odometer digits roll into place ---- */
+document.querySelectorAll('.odo').forEach(od => {
+  const cols = [];
+  [...od.dataset.v].forEach(ch => {
+    const d = document.createElement('span'); d.className = 'd';
+    if (/\d/.test(ch)) {
+      const inner = document.createElement('span');
+      inner.innerHTML = Array.from({ length: 20 }, (_, i) => `<b>${i % 10}</b>`).join('');
+      d.appendChild(inner); cols.push({ inner, n: +ch });
+    } else d.innerHTML = `<span><b>${ch}</b></span>`;
+    od.appendChild(d);
+  });
+  ScrollTrigger.create({
+    trigger: od, start: 'top 88%', once: true,
+    onEnter: () => cols.forEach((c, i) => gsap.fromTo(c.inner, { yPercent: 0 }, { yPercent: -((10 + c.n) / 20) * 100, duration: 2 + i * .25, ease: 'expo.out', delay: i * .06 }))
+  });
+});
+const PARTNERS = [
+  ['RISO HAUS', 'font-weight:700;letter-spacing:.16em;font-size:20px'],
+  ['Druckerei Nord', 'font-family:Georgia,serif;font-style:italic'],
+  ['type/lab', 'font-family:"Courier New",monospace;font-size:24px'],
+  ['Museum of Print', 'font-weight:600;letter-spacing:-.04em'],
+  ['PAPIER & CO.', 'font-family:Georgia,serif;letter-spacing:.1em;font-size:20px'],
+  ['Offset Club', 'font-weight:800;letter-spacing:-.06em;font-size:28px'],
+  ['KABK Den Haag', 'font-weight:400;letter-spacing:.02em'],
+  ['Ink & Grain', 'font-family:Georgia,serif;font-weight:700'],
+];
+const prow = document.getElementById('plogos');
+prow.innerHTML = [...PARTNERS, ...PARTNERS].map(([n, st]) => `<span style='${st}'>${n}</span>`).join('');
+let px = 0;
+gsap.ticker.add(() => {
+  const v = lenis.velocity || 0, half = prow.scrollWidth / 2;
+  px -= .45 + Math.min(Math.abs(v), 40) * .1;
+  if (px <= -half) px += half;
+  prow.style.transform = `translate3d(${px}px,0,0)`;
+});
+
+/* ---- (08) voices: a stack of quote cards, pass the top one on ---- */
+const vcards = gsap.utils.toArray('.vcard');
+const ROT = [-3, 4, -6, 2];
+let vorder = vcards.map((_, i) => i), vbusy = false, vshown = 0;
+const vcount = document.getElementById('vcount');
+function layoutStack(instant) {
+  vorder.forEach((ci, depth) => {
+    gsap.to(vcards[ci], { x: 0, y: depth * 16, rotate: depth === 0 ? 0 : ROT[depth], scale: 1 - depth * .05, zIndex: 10 - depth, opacity: depth > 3 ? 0 : 1, duration: instant ? 0 : .8, ease: 'power3.out' });
+  });
+}
+layoutStack(true);
+gsap.from(vcards, { y: 120, opacity: 0, rotate: 10, stagger: .1, duration: 1.1, ease: 'power3.out', scrollTrigger: { trigger: '#stack2', start: 'top 80%' }, onComplete: () => layoutStack() });
+function nextVoice(dir = 1) {
+  if (vbusy) return; vbusy = true;
+  const top = vcards[vorder[0]];
+  gsap.to(top, {
+    x: dir * innerWidth * .35, y: -40, rotate: dir * 22, duration: .55, ease: 'power2.in',
+    onComplete: () => {
+      vorder.push(vorder.shift());
+      gsap.set(top, { zIndex: 0 });
+      layoutStack(); vbusy = false;
+      vshown = (vshown + 1) % vcards.length; vcount.textContent = `0${vshown + 1} / 0${vcards.length}`;
+    }
+  });
+}
+vcards.forEach(c => c.addEventListener('click', () => nextVoice(1)));
+document.getElementById('vnext').addEventListener('click', () => nextVoice(1));
+
+/* ---- (09) faq accordion ---- */
+document.querySelectorAll('.qa button').forEach(b => b.addEventListener('click', () => {
+  const qa = b.parentElement, open = !qa.classList.contains('open');
+  document.querySelectorAll('.qa.open').forEach(q => q.classList.remove('open'));
+  qa.classList.toggle('open', open);
+  setTimeout(() => ScrollTrigger.refresh(), 650);
+}));
+gsap.from('.qa', { y: 30, opacity: 0, stagger: .08, duration: .9, ease: 'power3.out', scrollTrigger: { trigger: '.qas', start: 'top 85%' } });
+
+/* ---- final CTA: posters get pasted onto the blue wall as you scroll — and wherever you click ---- */
+const paste = document.getElementById('paste'), hint = document.getElementById('pasteHint');
+const SPOTS = Array.from({ length: 16 }, (_, i) => {
+  const a = i * 2.39996 + .4, rx = .41 + (i % 3) * .03, ry = .36 + (i % 2) * .05;
+  return [50 + Math.cos(a) * rx * 100, 50 + Math.sin(a) * ry * 100, (Math.random() - .5) * 22, i % designs.length];
+});
+const spotEls = SPOTS.map(([x, y, r, d]) => {
+  const el = document.createElement('div'); el.className = 'pp';
+  el.style.left = `calc(${x}% - 4vw)`; el.style.top = `calc(${y}% - 5.5vw)`;
+  el.innerHTML = '<canvas class="poster"></canvas>'; paste.appendChild(el); paint(el.querySelector('canvas'), d);
+  gsap.set(el, { scale: 1.5, rotate: r + 14, opacity: 0 }); el._r = r; el._on = false;
+  return el;
+});
+function slap(el, on) {
+  if (el._on === on) return; el._on = on;
+  gsap.to(el, on ? { scale: 1, rotate: el._r, opacity: 1, duration: .45, ease: 'back.out(2.2)' } : { scale: 1.4, rotate: el._r + 14, opacity: 0, duration: .3, ease: 'power2.in' });
+}
+ScrollTrigger.create({
+  trigger: paste, start: 'top 75%', end: 'bottom 60%',
+  onUpdate: s => { const n = Math.floor(s.progress * (spotEls.length + 2)); spotEls.forEach((el, i) => slap(el, i < n)); }
+});
+let pasted = [];
+paste.addEventListener('pointermove', e => { const r = paste.getBoundingClientRect(); hint.style.transform = `translate(${e.clientX - r.left + 14}px, ${e.clientY - r.top + 14}px)`; });
+paste.addEventListener('click', e => {
+  if (e.target.closest('a')) return;
+  const r = paste.getBoundingClientRect();
+  const el = document.createElement('div'); el.className = 'pp';
+  el.innerHTML = '<canvas class="poster"></canvas>'; paste.appendChild(el);
+  paint(el.querySelector('canvas'), Math.random() * designs.length | 0);
+  const w = el.offsetWidth, h = w * 712 / 512;
+  el.style.left = (e.clientX - r.left - w / 2) + 'px'; el.style.top = (e.clientY - r.top - h / 2) + 'px';
+  const rot = (Math.random() - .5) * 24;
+  gsap.fromTo(el, { scale: 1.7, rotate: rot + 16, opacity: 0 }, { scale: 1, rotate: rot, opacity: 1, duration: .45, ease: 'back.out(2.4)' });
+  pasted.push(el);
+  if (pasted.length > 24) { const old = pasted.shift(); gsap.to(old, { opacity: 0, scale: .8, duration: .4, onComplete: () => old.remove() }); }
+});
+
+/* ---- footer: two ink layers drift into registration as the sheet arrives ---- */
+const l2 = document.querySelector('.wordmark .l2');
+const reg = { p: 0, mx: 0, my: 0 };
+ScrollTrigger.create({ trigger: '#sheet', start: 'top bottom', end: 'bottom bottom', scrub: true, onUpdate: s => reg.p = s.progress });
+document.getElementById('sheet').addEventListener('pointermove', e => { reg.mx = e.clientX / innerWidth - .5; reg.my = e.clientY / innerHeight - .5; });
+gsap.ticker.add(() => {
+  const off = (1 - easeOut(reg.p)) * 38 + 3;              // 41px off-register → 3px "riso" offset when aligned
+  l2.style.transform = `translate(${off * .9 + reg.mx * 14}px, ${-off * .5 + reg.my * 10}px)`;
+});
+document.getElementById('nl').addEventListener('submit', e => {
+  e.preventDefault();
+  document.getElementById('thanks').textContent = 'Thank you — see you on the wall.';
+  e.target.reset();
+});
+gsap.from('.sheet-top > div', { y: 40, opacity: 0, stagger: .1, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: '#sheet', start: 'top 85%' } });
+
+addEventListener('load', () => { ScrollTrigger.refresh(); sizeMap(); });
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

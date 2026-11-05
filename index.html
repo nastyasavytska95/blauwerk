@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blauwerk — версії</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #eef1f8; --ink: #0b1433; --blue: #1f45e6; --muted: #6a7392; --line: #d5dbeb; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; background: var(--bg); color: var(--ink); font: 500 14px/1.45 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { width: min(860px, calc(100% - 32px)); margin: 0 auto; padding: 12vh 0 10vh; }
+  .head { display: flex; gap: 14px; font-size: 13px; } .head span:first-child { color: var(--muted); }
+  h1 { font-weight: 500; font-size: clamp(40px, 6vw, 72px); letter-spacing: -.055em; line-height: .95; margin: 22px 0 14px; }
+  .lead { color: var(--muted); max-width: 440px; margin-bottom: 7vh; }
+  a.v { display: grid; grid-template-columns: 64px 1fr auto; gap: 22px; align-items: start; padding: 24px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; transition: padding .35s cubic-bezier(.2,.8,.2,1); }
+  a.v:last-of-type { border-bottom: 1px solid var(--line); }
+  a.v:hover { padding-left: 12px; }
+  a.v .n { font-size: 30px; letter-spacing: -.05em; line-height: 1; }
+  a.v h2 { font-weight: 500; font-size: 18px; letter-spacing: -.02em; margin-bottom: 8px; }
+  a.v ul { list-style: none; color: var(--muted); font-size: 13px; }
+  a.v ul li::before { content: "— "; }
+  a.v .go { font-size: 13px; white-space: nowrap; }
+  a.v.cur .n { color: var(--blue); }
+  .tag { display: inline-block; margin-left: 8px; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--ink); color: #fff; vertical-align: 2px; }
+  .foot { margin-top: 6vh; font-size: 13px; color: var(--muted); }
+  .foot a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <div class="head"><span>(00)</span><span>Blauwerk 2027 — experiment log</span></div>
+  <h1>Усі версії</h1>
+  <p class="lead">Кожна ітерація збережена окремо, без змін. Щоб відкотитися, просто назвіть номер версії.</p>
+
+  <a class="v cur" href="v12/index.html">
+    <span class="n">v12</span>
+    <div><h2>Фінальні правки: меню, нові постери, мобільна версія <span class="tag">актуальна</span></h2>
+      <ul>
+        <li>Меню рівно по центру і веде по секціях лендингу (About, Rooms, Jury picks, Countries, Program, FAQ) з плавним скролом і підсвіткою поточної секції</li>
+        <li>14 нових дизайнів постерів — тепер їх 28, і на кулі/стіні вони майже не повторюються</li>
+        <li>Карта: штрихи й міста з'являються в довільних місцях, а не розходяться з центру</li>
+        <li>Мобільна версія: меню на весь екран, адаптовані всі секції, футер із 3 постерами, архів із пальцевим керуванням</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v11/index.html">
+    <span class="n">v11</span>
+    <div><h2>Шліфування: кути, відступи, пропорції карти</h2>
+      <ul>
+        <li>Картки на мотузці у футері із заокругленими кутами</li>
+        <li>Менші відступи в нижній половині сторінки (журі, програма, цифри, голоси, FAQ, футер)</li>
+        <li>Під картою додано темний простір перед світлою секцією журі</li>
+        <li>Карта у справжніх пропорціях (раніше була розтягнута по вертикалі) і без хибної лінії через океан</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v10/index.html">
+    <span class="n">v10</span>
+    <div><h2>Карта з перемиканням теми, мотузка з постерами</h2>
+      <ul>
+        <li>Бейдж версії більше не показується на сайті (номер лишається тут і в назві папки)</li>
+        <li>Прелоадер без цифр: три постери тасуються й розлітаються в кулю</li>
+        <li>Карту повернуто: світла карта зі штрихів → на середині скролу фон темніє, заголовок змінюється; одна чітка синя точка на місто, підказка при наведенні</li>
+        <li>Цифри — одним реченням у стилі маніфесту, числа рахуються під час читання</li>
+        <li>Футер: постери на мотузці з прищіпками, гойдаються від курсора</li>
+        <li>Архів (<b>v10/archive.html</b>): крайні постери скошені й нахилені значно сильніше</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v9/index.html">
+    <span class="n">v9</span>
+    <div><h2>Інтро, секція-перемикач, сторінка архіву</h2>
+      <ul>
+        <li>Прелоадер з лічильником → куля збирається з центру → заголовки виїжджають знизу з-під маски</li>
+        <li>Увесь текст на сторінці з'являється рядками знизу вгору, як на kononenkogroup.com</li>
+        <li>Карту замінено на секцію з 8 променями: на половині скролу фон стає темним, заголовок змінюється</li>
+        <li>Біжучий рядок переїхав вище, перед «Why paper still matters»</li>
+        <li>Цифри з живими міні-графіками; відступи між секціями зменшено</li>
+        <li>Компактний футер: заголовок, кнопка, маленький циферблат, постери реагують на курсор</li>
+        <li>Нова сторінка <b>archive.html</b> — панорама постерів як на joshpuckett.me, клік відкриває постер</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v8/index.html">
+    <span class="n">v8</span>
+    <div><h2>Карта з ліній, футер-циферблат, більше повітря</h2>
+      <ul>
+        <li>Програма: усі елементи рядка на одній горизонтальній лінії</li>
+        <li>Карта з тонких сірих штрихів: біля курсора білі, міста підсвічуються синім усередині самої карти; заголовок більше не заходить на карту</li>
+        <li>Темна сцена карти відкривається з лінії й так само закривається, без різкого перемикання теми</li>
+        <li>Картки Voices по центру</li>
+        <li>Фінальну CTA-секцію й старий футер прибрано; новий футер — циферблат днів до дедлайну й обрізані постери знизу, без розсилки</li>
+        <li>Більші відступи між усіма секціями</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v7/index.html">
+    <span class="n">v7</span>
+    <div><h2>Повна сторінка, перемикання теми, футер-аркуш</h2>
+      <ul>
+        <li>Карта — мозаїка з маленьких «постерів», що росте від Роттердама; сторінка плавно темніє, поки карта на екрані</li>
+        <li>Текст хіро перенесено в один рядок унизу</li>
+        <li>Нотатки маніфесту — три рівні колонки з лініями</li>
+        <li>Журі: менший відступ, не обрізається «g»</li>
+        <li>Нові секції: Програма, Цифри й партнери, Голоси, FAQ</li>
+        <li>Фінал: клікни — і на синю стіну наклеюється постер</li>
+        <li>Футер як надрукований аркуш: мітки обрізу, кольорова шкала, ризо-шари логотипу сходяться під час скролу</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v6/index.html">
+    <span class="n">v6</span>
+    <div><h2>Карта з частинок, чисте журі</h2>
+      <ul>
+        <li>Фон хіро — крапки, що біля курсора збільшуються й стають сірими</li>
+        <li>Підзаголовки regular і світліші</li>
+        <li>Постери в маніфесті рухаються помітніше, більший відступ до біжучого рядка</li>
+        <li>Секцію Open call прибрано, журі тепер (05)</li>
+        <li>Журі: один рівний ряд постерів, спокійні курсори з іменами</li>
+        <li>Карта на темному фоні: розсипані частинки збираються в материки під час скролу</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v5/index.html">
+    <span class="n">v5</span>
+    <div><h2>Курсори журі, лінії скролу, нова карта</h2>
+      <ul>
+        <li>Виправлено накладання постерів у маніфесті на заголовок і біжучий рядок</li>
+        <li>Журі: 6 «живих» курсорів з іменами блукають постерами й шортлистять їх; ваш курсор — «You»</li>
+        <li>Шкала скролу з ліній праворуч зі збільшенням біля поточної позиції, клік — перехід</li>
+        <li>Та сама лінійка замість смуги прогресу в тематичних залах</li>
+        <li>Фон хіро: ледь помітні вертикальні штрихи, що ростуть біля курсора</li>
+        <li>Карта зі штрихів: швидко програється один раз, реагує на курсор</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v4/index.html">
+    <span class="n">v4</span>
+    <div><h2>Секції 04–06</h2>
+      <ul>
+        <li>Текст хіро перенесено в бічні колонки, щоб сфера його не перекривала</li>
+        <li>Гліч залежить від швидкості скролу і швидко зникає після зупинки</li>
+        <li>Карта світу, Open call (таймлайн + зона завантаження), журі з портретами</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v3/index.html">
+    <span class="n">v3</span>
+    <div><h2>Типографіка v1, секції 01–03</h2>
+      <ul>
+        <li>Розкладка й шрифт тексту як у v1</li>
+        <li>Гліч приблизно вп'ятеро слабший</li>
+        <li>Маніфест, біжучий рядок, тематичні зали (горизонтальний скрол), добірка журі з фільтрами</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v2/index.html">
+    <span class="n">v2</span>
+    <div><h2>Синя палітра та власна анімація</h2>
+      <ul>
+        <li>Тема Blauwerk — онлайн-бієнале постерів</li>
+        <li>Сфера → подвійна спіраль → стіна, постери на ній перевертаються</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+  <a class="v" href="v1/index.html">
+    <span class="n">v1</span>
+    <div><h2>Відтворення референсу</h2>
+      <ul>
+        <li>Хаотичні картки → кільце → нахилена сітка, червоно-чорна палітра</li>
+      </ul></div>
+    <span class="go">Відкрити →</span>
+  </a>
+
+  <p class="foot">План усього лендингу — у файлі PLAN.md поруч.</p>
+</main>
+</body>
+</html>

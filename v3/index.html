@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blauwerk 2027 — v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* v3 — v1 typography + blue palette · sphere → helix → wall · manifesto / rooms / featured */
+  :root {
+    --bg: #eef1f8;
+    --ink: #0b1433;
+    --blue: #1f45e6;
+    --muted: #6a7392;
+    --line: #d5dbeb;
+    --pad: max(32px, calc((100vw - 1280px)/2 + 24px));
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+  a { color: inherit; }
+
+  /* ---------- nav (v1 style) ---------- */
+  .nav {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+    width: min(1280px, calc(100% - 64px)); height: 52px; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 8px 0 18px; border-radius: 14px;
+    background: rgba(255,255,255,.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    font-size: 13px; transition: opacity .5s, transform .5s;
+  }
+  .nav.hide { opacity: 0; transform: translate(-50%, -12px); pointer-events: none; }
+  .logo { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 15px; letter-spacing: -.02em; }
+  .logo i { width: 18px; height: 18px; border-radius: 5px; background: var(--blue); position: relative; }
+  .logo i::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fff; }
+  .links { display: flex; gap: 26px; }
+  .links a, .right a { text-decoration: none; }
+  .right { display: flex; align-items: center; gap: 20px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px;
+    border-radius: 999px; background: var(--ink); color: #fff !important; font-size: 13px; font-weight: 500;
+    text-decoration: none; border: 0; cursor: pointer; font-family: inherit; transition: background .3s;
+  }
+  .btn:hover { background: var(--blue); }
+  .btn svg { width: 12px; height: 12px; }
+
+  /* ---------- stage ---------- */
+  #scroll { height: 1000vh; position: relative; z-index: 1; }
+  .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+  canvas#gl { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+
+  .hero { position: absolute; inset: 0; z-index: 1; }
+  .hero h1 {
+    position: absolute; top: 15vh; font-weight: 500; font-size: clamp(48px, 7.6vw, 118px);
+    line-height: .92; letter-spacing: -.055em; perspective: 900px;
+  }
+  .hero h1.l { left: var(--pad); }
+  .hero h1.r { right: var(--pad); text-align: right; }
+  .hero h1 span.ch { display: inline-block; transform-origin: 50% 100%; will-change: transform, opacity; }
+  .hero .meta { position: absolute; bottom: 8vh; left: 30%; font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .hero .meta p { max-width: 260px; }
+  .hero .meta p:nth-child(2) { margin: 14px 0 0 150px; }
+  .hero .meta p:nth-child(3) { margin: 14px 0 0 300px; }
+
+  .stats { position: absolute; z-index: 3; left: var(--pad); bottom: 8vh; display: flex; gap: 44px; opacity: 0; }
+  .stats div { font-size: 13px; font-weight: 500; }
+  .stats b { display: block; font-size: clamp(36px, 4vw, 60px); font-weight: 500; letter-spacing: -.05em; line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+  .helixcap { position: absolute; z-index: 3; right: var(--pad); top: 18vh; font-size: 13px; line-height: 1.3; font-weight: 500; opacity: 0; }
+  .helixcap p { max-width: 230px; }
+  .helixcap p + p { margin: 12px 0 0 120px; }
+
+  .part { position: absolute; z-index: 3; top: 50%; left: var(--pad); transform: translateY(-50%); width: 36%; max-width: 520px; }
+  .part h2 { font-weight: 500; font-size: clamp(44px, 5.6vw, 92px); line-height: .98; letter-spacing: -.05em; }
+  .part h2 .line { display: block; overflow: hidden; padding-bottom: .06em; }
+  .part h2 .line > span { display: inline-block; will-change: transform, opacity; }
+  .part .sub { display: flex; flex-direction: column; font-size: 13px; font-weight: 500; line-height: 1.3; margin-top: 30px; }
+  .part .sub p { max-width: 230px; }
+  .part .sub p + p { margin: 10px 0 0 160px; }
+  .part .btn { margin-top: 34px; }
+  .part .fade { will-change: opacity, transform; }
+
+  /* scroll ticks (v1) */
+  .ticks { position: fixed; right: 18px; top: 40px; z-index: 60; display: flex; flex-direction: column; gap: 4px; }
+  .ticks i { display: block; width: 9px; height: 1px; background: #c3c9da; transition: width .25s, background .25s; }
+  .ticks i.on { width: 14px; background: var(--ink); }
+
+  .ver { position: fixed; left: 16px; bottom: 16px; z-index: 99; font: 600 11px Inter, sans-serif; letter-spacing: .06em; padding: 6px 10px; border-radius: 999px; background: var(--ink); color: #fff; }
+
+  /* ---------- shared section type ---------- */
+  .sec { position: relative; z-index: 1; padding: 0 var(--pad); }
+  .sec-head { display: flex; gap: 14px; font-size: 13px; font-weight: 500; }
+  .sec-head span:first-child { color: var(--muted); }
+  .h2 { font-weight: 500; font-size: clamp(44px, 6.4vw, 104px); line-height: .94; letter-spacing: -.055em; }
+  .small { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .small p { max-width: 240px; }
+  .mask { display: block; overflow: hidden; padding-bottom: .06em; }
+  .mask > span { display: inline-block; }
+  canvas.poster { display: block; width: 100%; height: auto; aspect-ratio: 512 / 712; border-radius: 10px; }
+
+  /* ---------- (01) manifesto ---------- */
+  .manifesto { padding-top: 22vh; padding-bottom: 26vh; }
+  .manifesto .big {
+    margin-top: 6vh; font-weight: 500; font-size: clamp(30px, 4.1vw, 66px); line-height: 1.04; letter-spacing: -.045em;
+    max-width: 1180px; text-indent: 18%;
+  }
+  .manifesto .big .w { color: #c5cbdd; transition: none; }
+  .manifesto .notes { display: flex; margin-top: 9vh; margin-left: 30%; }
+  .manifesto .notes p:nth-child(2) { margin: 34px 0 0 60px; }
+  .manifesto .notes p:nth-child(3) { margin: 68px 0 0 60px; }
+  .manifesto .floater { position: absolute; width: clamp(80px, 9vw, 140px); z-index: -1; }
+  .manifesto .floater canvas { box-shadow: 0 30px 60px -30px rgba(11,20,51,.35); }
+
+  /* marquee */
+  .marquee { position: relative; z-index: 1; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 22px 0; }
+  .marquee .row { display: flex; width: max-content; font-size: clamp(28px, 3.4vw, 54px); font-weight: 500; letter-spacing: -.045em; white-space: nowrap; will-change: transform; }
+  .marquee .row span { padding-right: .6em; }
+  .marquee .row span i { font-style: normal; color: var(--blue); }
+
+  /* ---------- (02) rooms — horizontal ---------- */
+  .rooms { position: relative; z-index: 1; height: 100vh; overflow: hidden; }
+  .rooms-track { display: flex; align-items: center; height: 100vh; padding-left: var(--pad); width: max-content; will-change: transform; }
+  .room-intro { width: min(560px, 80vw); flex-shrink: 0; margin-right: 10vw; }
+  .room-intro .h2 { margin-top: 28px; }
+  .room-intro .small { margin-top: 34px; }
+  .room-intro .small p + p { margin: 10px 0 0 150px; }
+  .room { display: flex; align-items: flex-end; gap: 36px; flex-shrink: 0; margin-right: 9vw; perspective: 1200px; }
+  .room-card { width: clamp(240px, 26vw, 380px); transform-style: preserve-3d; will-change: transform; }
+  .room-card .tilt { transition: transform .5s cubic-bezier(.2,.7,.2,1); transform-style: preserve-3d; }
+  .room-card canvas { box-shadow: 0 40px 80px -40px rgba(11,20,51,.45); }
+  .room-info { width: 240px; padding-bottom: 6px; }
+  .room-info .num { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .room-info h3 { font-weight: 500; font-size: clamp(34px, 3.4vw, 52px); letter-spacing: -.05em; line-height: .95; margin: 14px 0 20px; }
+  .room-info p { font-size: 13px; font-weight: 500; line-height: 1.35; }
+  .room-info .count { display: inline-block; margin-top: 22px; font-size: 13px; font-weight: 500; border-bottom: 1px solid currentColor; }
+  .rooms-end { flex-shrink: 0; width: 30vw; }
+  .rooms-bar { position: absolute; left: var(--pad); right: var(--pad); bottom: 7vh; height: 1px; background: var(--line); }
+  .rooms-bar i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; transform: scaleX(0); }
+  .rooms-label { position: absolute; left: var(--pad); bottom: calc(7vh + 14px); font-size: 13px; font-weight: 500; display: flex; gap: 14px; }
+  .rooms-label span:first-child { color: var(--muted); }
+
+  /* ---------- (03) featured ---------- */
+  .featured { padding-top: 22vh; padding-bottom: 20vh; }
+  .feat-top { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 40px; }
+  .feat-top .h2 { margin-top: 28px; }
+  .feat-top .small { justify-self: end; }
+  .feat-top .small p + p { margin: 10px 0 0 120px; }
+  .filters { display: flex; gap: 8px; margin-top: 8vh; flex-wrap: wrap; }
+  .filters button {
+    font: 500 13px Inter, sans-serif; height: 34px; padding: 0 15px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); transition: all .3s;
+  }
+  .filters button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .filters button sup { font-size: 9px; margin-left: 3px; opacity: .6; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 28px 22px; margin-top: 34px; }
+  .fcard { perspective: 1200px; cursor: pointer; }
+  .fcard .inner { position: relative; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.2,.8,.2,1); }
+  .fcard:hover .inner, .fcard.flipped .inner { transform: rotateY(180deg); }
+  .fcard .face { backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 10px; overflow: hidden; }
+  .fcard .back {
+    position: absolute; inset: 0; transform: rotateY(180deg); background: var(--ink); color: #fff;
+    padding: 16px; font-size: 12px !important; display: flex; flex-direction: column; justify-content: space-between; font-size: 13px; font-weight: 500; line-height: 1.35;
+  }
+  @media (max-width: 1200px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+  .fcard .back h4 { font-weight: 500; font-size: 24px; letter-spacing: -.04em; line-height: 1; }
+  .fcard .back dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; }
+  .fcard .back dt { color: #8d98c4; }
+  .fcard .back q { color: #c9d3ff; }
+  .fcard .cap { display: flex; justify-content: space-between; font-size: 13px; font-weight: 500; margin-top: 12px; }
+  .fcard .cap span:last-child { color: var(--muted); }
+  .feat-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10vh; border-top: 1px solid var(--line); padding-top: 22px; font-size: 13px; font-weight: 500; }
+
+  .next { position: relative; z-index: 1; height: 50vh; display: grid; place-items: center; color: var(--muted); font-size: 13px; font-weight: 500; }
+
+  @media (max-width: 860px) {
+    .links { display: none; }
+    .nav { width: calc(100% - 32px); }
+    .nav .right > a:first-child { display: none; }
+    :root { --pad: 16px; }
+    .hero h1 { font-size: 13vw; }
+    .hero h1.r { top: 34vh; }
+    .hero .meta { left: 16px; right: 16px; }
+    .hero .meta p:nth-child(n) { margin-left: 0; }
+    .helixcap { display: none; }
+    .stats { gap: 22px; }
+    .part { left: 16px; right: 16px; width: auto; top: auto; bottom: 6vh; transform: none; }
+    .part .sub p + p { margin-left: 0; }
+    .manifesto .big { text-indent: 0; }
+    .manifesto .notes { margin-left: 0; flex-direction: column; }
+    .manifesto .notes p:nth-child(n) { margin: 12px 0 0; }
+    .room { flex-direction: column; align-items: flex-start; }
+    .room-card { width: 62vw; }
+    .feat-top { grid-template-columns: 1fr; }
+    .feat-top .small { justify-self: start; }
+    .feat-top .small p + p { margin-left: 0; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 20px 12px; }
+    .ticks { display: none; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+</head>
+<body>
+<nav class="nav" id="nav">
+  <div class="logo"><i></i>blauwerk</div>
+  <div class="links"><a href="#">Exhibition</a><a href="#rooms">Rooms</a><a href="#featured">Jury picks</a><a href="#">Open call</a><a href="#">About</a></div>
+  <div class="right"><a href="#">Log in</a><a class="btn" href="#">Submit a poster <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
+</nav>
+<div class="ticks" id="ticks"></div>
+
+<section id="scroll">
+  <div class="stage">
+    <div class="hero" id="hero">
+      <h1 class="l split">Posters<br>that move</h1>
+      <h1 class="r split">people<br>everywhere</h1>
+      <div class="meta" id="meta">
+        <p>Blauwerk gathers 1,200 posters from 64 countries onto one open wall — free to walk, from anywhere</p>
+        <p>Scroll to step inside. Turn any poster to read the story behind it</p>
+        <p>Open call until 14 March</p>
+      </div>
+    </div>
+
+    <canvas id="gl"></canvas>
+
+    <div class="helixcap" id="helixcap">
+      <p>Every poster is a thread — a message one stranger leaves for another.</p>
+      <p>Spun together, they become a record of how the world talks on paper</p>
+    </div>
+    <div class="stats" id="stats">
+      <div><b data-to="1200">0</b>posters on show</div>
+      <div><b data-to="64">0</b>countries</div>
+      <div><b data-to="18">0</b>curators</div>
+    </div>
+
+    <div class="part" id="part">
+      <h2>
+        <span class="line"><span>One wall.</span></span>
+        <span class="line"><span>Every voice</span></span>
+        <span class="line"><span>in print.</span></span>
+      </h2>
+      <div class="sub fade">
+        <p>Turn a poster over to meet the studio, the city and the idea that started it.</p>
+        <p>Browse by colour, country or typeface</p>
+      </div>
+      <a class="btn fade" href="#featured">Walk the exhibition <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- (01) manifesto -->
+<section class="sec manifesto" id="manifesto">
+  <div class="sec-head reveal"><span>(01)</span><span>Why paper still matters</span></div>
+  <p class="big" id="mtext">A poster has three seconds to stop a stranger. No algorithm, no feed, no second chance — just paper, a wall and an idea loud enough to be seen. Blauwerk is a year-long celebration of the people who make those three seconds count.</p>
+  <div class="notes small">
+    <p class="reveal">Fourth edition, since 2019</p>
+    <p class="reveal">Run by a non-profit foundation in Rotterdam</p>
+    <p class="reveal">Every poster on the wall was printed at least once in the real world</p>
+  </div>
+  <div class="floater" data-speed="-.35" style="left:6%;top:12%"><canvas class="poster" data-d="1"></canvas></div>
+  <div class="floater" data-speed=".25" style="right:7%;top:6%;transform:rotate(6deg)"><canvas class="poster" data-d="3"></canvas></div>
+  <div class="floater" data-speed="-.55" style="right:4%;bottom:-6%"><canvas class="poster" data-d="5"></canvas></div>
+  <div class="floater" data-speed=".45" style="left:14%;bottom:4%"><canvas class="poster" data-d="12"></canvas></div>
+</section>
+
+<div class="marquee" id="marquee">
+  <div class="row"><span>What do we owe each other? <i>—</i></span><span>Open call 2027 <i>—</i></span><span>What do we owe each other? <i>—</i></span><span>Open call 2027 <i>—</i></span><span>What do we owe each other? <i>—</i></span><span>Open call 2027 <i>—</i></span></div>
+</div>
+
+<!-- (02) rooms -->
+<section class="rooms" id="rooms">
+  <div class="rooms-track" id="track">
+    <div class="room-intro">
+      <div class="sec-head"><span>(02)</span><span>Theme 2027</span></div>
+      <h2 class="h2"><span class="mask"><span>What do we</span></span><span class="mask"><span>owe each</span></span><span class="mask"><span>other?</span></span></h2>
+      <div class="small">
+        <p>We asked designers everywhere one question. 1,200 of them answered in print.</p>
+        <p>Four rooms. Four kinds of answer</p>
+      </div>
+    </div>
+    <article class="room">
+      <div class="room-card"><div class="tilt"><canvas class="poster" data-d="4"></canvas></div></div>
+      <div class="room-info"><span class="num">Room 01</span><h3>Neighbours</h3><p>Posters about the people next door — courtyards, queues, shared walls and the small rules that let us live close together.</p><a class="count" href="#">312 posters</a></div>
+    </article>
+    <article class="room">
+      <div class="room-card"><div class="tilt"><canvas class="poster" data-d="6"></canvas></div></div>
+      <div class="room-info"><span class="num">Room 02</span><h3>Climate<br>&amp; care</h3><p>Water, air and soil. What we borrow from a place, and how we might give it back.</p><a class="count" href="#">287 posters</a></div>
+    </article>
+    <article class="room">
+      <div class="room-card"><div class="tilt"><canvas class="poster" data-d="2"></canvas></div></div>
+      <div class="room-info"><span class="num">Room 03</span><h3>Memory</h3><p>Family archives, lost languages, the faces on old banknotes. Remembering as something we do for each other.</p><a class="count" href="#">341 posters</a></div>
+    </article>
+    <article class="room">
+      <div class="room-card"><div class="tilt"><canvas class="poster" data-d="13"></canvas></div></div>
+      <div class="room-info"><span class="num">Room 04</span><h3>Tomorrow’s<br>type</h3><p>Letterforms built for readers who don’t exist yet. Experimental typography as a promise to the future.</p><a class="count" href="#">260 posters</a></div>
+    </article>
+    <div class="rooms-end"></div>
+  </div>
+  <div class="rooms-label"><span id="roomsNum">01 / 04</span><span>Scroll to walk through the rooms</span></div>
+  <div class="rooms-bar"><i id="roomsBar"></i></div>
+</section>
+
+<!-- (03) featured -->
+<section class="sec featured" id="featured">
+  <div class="feat-top">
+    <div>
+      <div class="sec-head reveal"><span>(03)</span><span>Picked by the jury</span></div>
+      <h2 class="h2"><span class="mask"><span>Twelve posters</span></span><span class="mask"><span>to start with</span></span></h2>
+    </div>
+    <div class="small">
+      <p class="reveal">Hover a poster to turn it over. Every back tells you who made it, where and why.</p>
+      <p class="reveal">Filter by what caught your eye</p>
+    </div>
+  </div>
+  <div class="filters" id="filters">
+    <button class="on" data-f="all">All<sup>12</sup></button>
+    <button data-f="type">Typography<sup>4</sup></button>
+    <button data-f="photo">Photography<sup>4</sup></button>
+    <button data-f="abstract">Abstract<sup>4</sup></button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="feat-foot"><span>1,188 more posters on the wall</span><a class="btn" href="#">Open the full archive <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
+</section>
+
+<div class="next">(04) 64 countries, one wall — coming in the next version</div>
+<div class="ver">v3 · v1 type · sections 01–03</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ================= helpers ================= */
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const range = (p, a, b) => clamp((p - a) / (b - a));
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const easeOutBack = t => { const c = 1.6; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+const rand = rng(7);
+
+/* ================= split hero text into letters ================= */
+document.querySelectorAll('.split').forEach(el => {
+  const walk = node => [...node.childNodes].forEach(n => {
+    if (n.nodeType === 3) {
+      const frag = document.createDocumentFragment();
+      [...n.textContent].forEach(c => {
+        if (c === ' ') { frag.appendChild(document.createTextNode(' ')); return; }
+        const s = document.createElement('span'); s.className = 'ch'; s.textContent = c; frag.appendChild(s);
+      });
+      n.replaceWith(frag);
+    } else if (n.nodeName !== 'BR') walk(n);
+  });
+  walk(el);
+});
+const heroChars = [...document.querySelectorAll('.hero .ch')].map((el, i) => ({ el, i }));
+
+/* ================= posters (blue palette) ================= */
+const NAVY = '#0a1a4a', COBALT = '#1f45e6', ICE = '#dfe7ff', SKY = '#6fa3ff', PAPER = '#f5f7fd', CYAN = '#38c6ff', DEEP = '#06102e';
+const designs = [
+  { bg: DEEP,   title: 'Deep\nField', style: 'orb' },
+  { bg: COBALT, title: 'Tide',        style: 'duo', duo: [NAVY, SKY] },
+  { bg: ICE,    title: 'Azul',        style: 'photoTop', duo: [NAVY, ICE] },
+  { bg: PAPER,  title: 'Blue\nHour',  style: 'circles' },
+  { bg: PAPER,  title: 'Quiet\nVoices\nCarry', style: 'editorial', duo: [COBALT, PAPER] },
+  { bg: COBALT, title: 'B',           style: 'bigLetter', duo: [NAVY, SKY] },
+  { bg: SKY,    title: 'Undertow',    style: 'waves' },
+  { bg: NAVY,   title: '',            style: 'photoFull', duo: [DEEP, SKY] },
+  { bg: NAVY,   title: 'Indigo',      style: 'duo', duo: [DEEP, COBALT] },
+  { bg: ICE,    title: 'Glass',       style: 'photoTop', duo: [COBALT, ICE] },
+  { bg: COBALT, title: '',            style: 'photoFull', duo: [NAVY, CYAN] },
+  { bg: DEEP,   title: 'Kobalt\n27',  style: 'orb' },
+  { bg: PAPER,  title: 'Wave\nForm',  style: 'waves' },
+  { bg: NAVY,   title: 'Ø',           style: 'bigLetter', duo: [DEEP, COBALT] },
+];
+const CW = 512, CH = 712;
+
+const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function duotone(ctx, x, y, w, h, dark, light) {
+  try {
+    const d = ctx.getImageData(x, y, w, h), a = hex(dark), b = hex(light), px = d.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const l = Math.pow((px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11) / 255, 1.1);
+      px[i] = a[0] + (b[0] - a[0]) * l; px[i + 1] = a[1] + (b[1] - a[1]) * l; px[i + 2] = a[2] + (b[2] - a[2]) * l;
+    }
+    ctx.putImageData(d, x, y);
+  } catch (e) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = light; ctx.fillRect(x, y, w, h); ctx.restore(); }
+}
+
+function drawPoster(ctx, d, img) {
+  ctx.save();
+  ctx.fillStyle = d.bg; ctx.fillRect(0, 0, CW, CH);
+  const photo = (x, y, w, h, duo) => {
+    if (!img) { const g = ctx.createLinearGradient(x, y, x, y + h); g.addColorStop(0, duo ? duo[1] : SKY); g.addColorStop(1, duo ? duo[0] : NAVY); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); return; }
+    const s = Math.max(w / img.width, h / img.height), iw = img.width * s, ih = img.height * s;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); ctx.restore();
+    if (duo) duotone(ctx, x, y, w, h, duo[0], duo[1]);
+  };
+  const small = (txt, x, y, col = '#fff', a = 'left') => { ctx.font = '600 13px Inter, sans-serif'; ctx.fillStyle = col; ctx.textAlign = a; ctx.fillText(txt, x, y); };
+  const lines = (txt, x, y, size, col, weight = 700, lh = .95) => {
+    ctx.font = `${weight} ${size}px Inter, sans-serif`; ctx.fillStyle = col; ctx.textAlign = 'left';
+    txt.split('\n').forEach((l, i) => ctx.fillText(l, x, y + i * size * lh));
+  };
+  const footer = col => { ctx.fillStyle = col; ctx.fillRect(36, CH - 40, CW - 72, 1.5); small('BLAUWERK 27', 36, CH - 16, col); small('№ ' + (100 + (d.title.length * 37) % 900), CW - 36, CH - 16, col, 'right'); };
+
+  switch (d.style) {
+    case 'orb': {
+      const g = ctx.createRadialGradient(CW * .5, CH * .42, 6, CW * .5, CH * .42, CW * .6);
+      g.addColorStop(0, '#d6f3ff'); g.addColorStop(.12, CYAN); g.addColorStop(.38, COBALT); g.addColorStop(.75, '#0b1a66'); g.addColorStop(1, DEEP);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+      ctx.strokeStyle = 'rgba(180,220,255,.35)'; ctx.lineWidth = 1;
+      for (let r = 60; r < 400; r += 34) { ctx.beginPath(); ctx.arc(CW * .5, CH * .42, r, 0, Math.PI * 2); ctx.stroke(); }
+      lines(d.title, 36, CH - 150, 74, '#fff', 600, .95);
+      small('EXHIBITION', 36, 50, '#cfe0ff');
+      footer('#cfe0ff');
+      break;
+    }
+    case 'duo':
+      photo(0, 0, CW, CH, d.duo);
+      lines(d.title, 30, CH - 70, 116, '#fff', 700, 1);
+      small('OPEN CALL 2027', 34, 48);
+      break;
+    case 'photoTop':
+      photo(0, 150, CW, CH - 150, d.duo);
+      lines(d.title, 30, 118, 104, NAVY, 600, 1);
+      small('ISSUE 04', CW - 30, 40, NAVY, 'right');
+      break;
+    case 'circles': {
+      const cols = [COBALT, SKY, NAVY, CYAN];
+      for (let i = 0; i < 9; i++) { ctx.fillStyle = cols[i % 4]; ctx.beginPath(); ctx.arc(110 + (i % 3) * 146, 110 + ((i / 3) | 0) * 146, 64, 0, Math.PI * (i % 2 ? 1 : 2)); ctx.fill(); }
+      lines(d.title, 36, CH - 170, 78, NAVY, 700, .95);
+      footer(NAVY);
+      break;
+    }
+    case 'editorial':
+      lines(d.title, 30, 92, 72, NAVY, 700, .98);
+      ctx.fillStyle = COBALT; ctx.fillRect(30, 420, 200, 200);
+      photo(250, 320, CW - 250, CH - 320, d.duo);
+      small('THE INTERVIEW', CW - 30, 40, NAVY, 'right');
+      break;
+    case 'bigLetter':
+      photo(CW * .4, 0, CW * .6, CH, d.duo);
+      ctx.font = '800 620px Inter, sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+      ctx.fillText(d.title, -30, CH - 70);
+      break;
+    case 'waves': {
+      const dark = d.bg === PAPER;
+      for (let k = 0; k < 16; k++) {
+        ctx.strokeStyle = dark ? (k % 3 ? COBALT : CYAN) : (k % 2 ? '#fff' : NAVY); ctx.lineWidth = 5;
+        ctx.beginPath();
+        for (let x = 0; x <= CW; x += 8) { const y = 70 + k * 30 + Math.sin(x / 50 + k * .5) * 18; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.stroke();
+      }
+      lines(d.title, 34, CH - 110, 70, dark ? NAVY : '#fff', 700, .95);
+      footer(dark ? NAVY : '#fff');
+      break;
+    }
+    case 'photoFull':
+      photo(0, 0, CW, CH, d.duo);
+      small('FIELD NOTES — LISBON', 30, 46);
+      break;
+  }
+  ctx.restore();
+}
+
+const designImgs = [], imgWaiters = designs.map(() => []);
+const posterTextures = designs.map((d, i) => {
+  const c = document.createElement('canvas'); c.width = CW; c.height = CH;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  drawPoster(ctx, d, null);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const redraw = img => { drawPoster(ctx, d, img); tex.needsUpdate = true; };
+  const img = new Image(); img.crossOrigin = 'anonymous';
+  img.onload = () => { tex.userData.img = img; designImgs[i] = img; redraw(img); imgWaiters[i].forEach(f => f()); };
+  img.src = `https://picsum.photos/seed/blau${i * 11 + 5}/600/820?grayscale`;
+  tex.userData.redraw = () => redraw(tex.userData.img || null);
+  return tex;
+});
+document.fonts && document.fonts.ready.then(() => posterTextures.forEach(t => t.userData.redraw()));
+
+/* ================= three setup ================= */
+const BG = new THREE.Color('#eef2fb');
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(BG, 17, 30);
+const camera = new THREE.PerspectiveCamera(32, 1, .1, 100);
+camera.position.set(0, 0, 20);
+
+function roundedCard(w, h, r) {
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  const g = new THREE.ShapeGeometry(s, 6), uv = g.attributes.uv, p = g.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (p.getX(i) - x) / w, (p.getY(i) - y) / h);
+  return g;
+}
+const CARD_H = CH / CW;
+const geo = roundedCard(1, CARD_H, .06);
+
+const COLS = 10, ROWS = 6, N = COLS * ROWS;
+const cards = [];
+const GOLD = Math.PI * (3 - Math.sqrt(5));
+for (let i = 0; i < N; i++) {
+  const g = new THREE.Group();
+  const front = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: posterTextures[(i * 3 + (i / COLS | 0)) % designs.length], side: THREE.FrontSide }));
+  const back = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: posterTextures[(i * 5 + 7) % designs.length], side: THREE.FrontSide }));
+  back.rotation.y = Math.PI;
+  g.add(front, back); scene.add(g);
+  // fibonacci sphere direction
+  const fy = 1 - 2 * (i + .5) / N, fr = Math.sqrt(1 - fy * fy), fa = i * GOLD;
+  cards.push({
+    g, col: i % COLS, row: (i / COLS) | 0,
+    dir: new THREE.Vector3(Math.cos(fa) * fr, fy, Math.sin(fa) * fr),
+    delay: rand(), roll: (rand() - .5) * .5,
+  });
+}
+
+/* ================= post: vertical streak + soft cyan/blue split ================= */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const fx = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAmt: { value: 0 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uAmt; varying vec2 vUv;
+    void main(){
+      vec2 d = vec2(0., uAmt) * (.4 + abs(vUv.x - .5) * 1.6);
+      float r = 0., g = 0., b = 0., a = 0.;
+      for (int i = 0; i < 10; i++) {
+        float t = float(i) / 9. - .5;
+        vec4 sr = texture2D(tDiffuse, vUv + d * (t - .5));
+        vec4 sg = texture2D(tDiffuse, vUv + d * t);
+        vec4 sb = texture2D(tDiffuse, vUv + d * (t + .5));
+        r += sr.r * sr.a; g += sg.g * sg.a; b += sb.b * sb.a; a += max(max(sr.a, sg.a), sb.a);
+      }
+      a /= 10.; r /= 10.; g /= 10.; b /= 10.;
+      gl_FragColor = a > .001 ? vec4(vec3(r, g, b) / a, a) : vec4(0.);
+    }`
+});
+composer.addPass(fx);
+composer.addPass(new OutputPass());
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); composer.setSize(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+/* ================= input ================= */
+const lenis = new Lenis({ lerp: .08, wheelMultiplier: .85 });
+const mouse = { x: 0, y: 0, sx: 0, sy: 0 };
+addEventListener('pointermove', e => { mouse.x = e.clientX / innerWidth * 2 - 1; mouse.y = e.clientY / innerHeight * 2 - 1; });
+
+/* ================= DOM refs ================= */
+const scrollEl = document.getElementById('scroll');
+const nav = document.getElementById('nav');
+const meta = document.getElementById('meta');
+const stats = document.getElementById('stats');
+const statNums = [...stats.querySelectorAll('b')];
+const helixcap = document.getElementById('helixcap');
+const part = document.getElementById('part');
+const partLines = [...part.querySelectorAll('.line > span')];
+const partFades = [...part.querySelectorAll('.fade')];
+const ticksEl = document.getElementById('ticks'), TICKS = 18;
+for (let i = 0; i < TICKS; i++) ticksEl.appendChild(document.createElement('i'));
+const tickEls = [...ticksEl.children];
+
+/* ================= scratch objects ================= */
+const M = new THREE.Matrix4(), ORIGIN = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
+const vS = new THREE.Vector3(), vH = new THREE.Vector3(), vW = new THREE.Vector3(), tmp = new THREE.Vector3();
+const qS = new THREE.Quaternion(), qH = new THREE.Quaternion(), qW = new THREE.Quaternion(), qT = new THREE.Quaternion(), qFlip = new THREE.Quaternion();
+const sphereRot = new THREE.Quaternion(), wallBase = new THREE.Quaternion(), eul = new THREE.Euler();
+const Y = new THREE.Vector3(0, 1, 0);
+const viewW = z => 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (camera.position.z - z) * camera.aspect;
+
+let lastP = 0, vel = 0;
+const clock = new THREE.Clock();
+
+function frame(time) {
+  lenis.raf(time);
+  const t = clock.getElapsedTime();
+  const max = scrollEl.offsetHeight - innerHeight;
+  const p = clamp(scrollY / max);
+  vel = lerp(vel, (p - lastP) * 60, .15); lastP = p;
+  mouse.sx = lerp(mouse.sx, mouse.x, .05); mouse.sy = lerp(mouse.sy, mouse.y, .05);
+  const narrow = innerWidth < 860;
+  const vw = viewW(0);
+
+  /* ---- phases ---- */
+  const toHelix = range(p, .05, .30);   // sphere -> double helix
+  const toWall  = range(p, .40, .60);   // helix  -> flat wall (right side)
+  const flip    = range(p, .70, .86);   // diagonal flip wave across the wall
+  const endP    = range(p, .90, 1);     // wall centres and fills the view
+
+  /* sphere */
+  const breathe = 1 + Math.sin(t * .8) * .015;
+  const Rs = (narrow ? 2.6 : 3.5) * breathe * (1 + toHelix * .2);
+  eul.set(.25 + mouse.sy * .25, t * .12 + p * 3 + mouse.sx * .5, 0);
+  sphereRot.setFromEuler(eul);
+
+  /* helix */
+  const helixSpin = t * .25 + p * 9;
+  const helixRise = lerp(-1, 3, range(p, .1, .5));
+  const Rh = narrow ? 2 : 2.7;
+
+  /* wall */
+  const wx = narrow ? 0 : lerp(vw * .2, 0, ease(endP));
+  const wy = narrow ? 1.4 : lerp(0, .2, endP);
+  const ws = lerp(narrow ? .52 : .78, 1.25, ease(endP));
+  eul.set(.05 + mouse.sy * .06, lerp(-.42, -.12, ease(endP)) + mouse.sx * .08, lerp(.04, 0, endP));
+  wallBase.setFromEuler(eul);
+  const wallDrift = Math.sin(t * .3) * .08;
+
+  cards.forEach((c, i) => {
+    /* --- sphere state --- */
+    vS.copy(c.dir).multiplyScalar(Rs).applyQuaternion(sphereRot);
+    vS.y -= .2;
+    M.lookAt(tmp.copy(c.dir), ORIGIN, UP); qS.setFromRotationMatrix(M).premultiply(sphereRot);
+    qT.setFromAxisAngle(tmp.set(0, 0, 1), c.roll); qS.multiply(qT);
+
+    /* --- helix state --- */
+    const strand = i % 2, u = (i >> 1) / (N / 2);
+    const a = u * Math.PI * 4 + strand * Math.PI + helixSpin;
+    const hy = (u - .5) * 13 + helixRise;
+    vH.set(Math.sin(a) * Rh, hy, Math.cos(a) * Rh);
+    M.lookAt(tmp.set(Math.sin(a), 0, Math.cos(a)), ORIGIN, UP); qH.setFromRotationMatrix(M);
+    qT.setFromAxisAngle(tmp.set(1, 0, 0), -.25); qH.multiply(qT);
+
+    /* --- wall state --- */
+    const cx = c.col - (COLS - 1) / 2, cy = (ROWS - 1) / 2 - c.row;
+    vW.set(cx * 1.1 * ws, cy * CARD_H * 1.08 * ws + wallDrift * (c.col % 2 ? 1 : -1), 0).applyQuaternion(wallBase);
+    vW.x += wx; vW.y += wy;
+    const fk = easeOutBack(clamp(flip * 2.2 - (c.col + c.row) / (COLS + ROWS) * 1.2));
+    qFlip.setFromAxisAngle(Y, Math.PI * fk);
+    qW.copy(wallBase).multiply(qFlip);
+
+    /* --- blend --- */
+    const k1 = ease(clamp(toHelix * 1.4 - (1 - (c.dir.y + 1) / 2) * .4));       // top of the sphere goes first
+    const k2 = ease(clamp(toWall * 1.6 - ((hy + 7) / 14) * .6));                  // helix unspools top-down
+
+    const pos = c.g.position.lerpVectors(vS, vH, k1).lerp(vW, k2);
+    pos.z += Math.sin(k2 * Math.PI) * 2.2 + Math.sin(fk * Math.PI) * .6;         // swoop toward camera / lift during flip
+    c.g.quaternion.slerpQuaternions(qS, qH, k1).slerp(qW, k2);
+    c.g.scale.setScalar(lerp(lerp(narrow ? .6 : .78, .82, k1), ws, k2));
+  });
+
+  /* ---- post fx strength ---- */
+  fx.uniforms.uAmt.value = clamp(vel * .22, -.007, .007);   // v3: much softer streak
+
+  /* ---- hero copy: letters tip backwards ---- */
+  const heroOut = range(p, 0, .08);
+  const total = heroChars.length;
+  heroChars.forEach(({ el, i }) => {
+    const k = easeOut(clamp(heroOut * 2 - (i / total) * 1));
+    el.style.opacity = 1 - k;
+    el.style.transform = `translateY(${-k * 30}px) rotateX(${k * 95}deg)`;
+  });
+  const metaK = 1 - range(p, 0, .04);
+  meta.style.opacity = metaK;
+  nav.classList.toggle('hide', p > .04 && scrollY < max + innerHeight * .6);
+
+  /* ---- helix captions + counters ---- */
+  const sIn = range(p, .2, .27), sOut = range(p, .39, .44), sK = sIn * (1 - sOut);
+  stats.style.opacity = sK; stats.style.transform = `translateY(${(1 - sIn) * 20 - sOut * 20}px)`;
+  helixcap.style.opacity = sK; helixcap.style.transform = `translateY(${(1 - sIn) * 20 - sOut * 20}px)`;
+  const cnt = easeOut(range(p, .2, .36));
+  statNums.forEach(b => b.textContent = Math.round(+b.dataset.to * cnt).toLocaleString('en-US'));
+
+  /* ---- wall copy ---- */
+  const inP = range(p, .56, .68), outP = range(p, .9, .96);
+  partLines.forEach((el, i) => {
+    const k = easeOut(clamp(inP * 1.6 - i * .2)) * (1 - easeOut(clamp(outP * 1.6 - i * .2)));
+    el.style.transform = `translateY(${(1 - k) * (outP > 0 ? -110 : 110)}%) rotate(${(1 - k) * (outP > 0 ? -3 : 4)}deg)`;
+    el.style.opacity = k;
+  });
+  partFades.forEach((el, i) => {
+    const k = clamp(inP * 1.5 - .3 - i * .12) * (1 - clamp(outP * 2));
+    el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * 14}px)`;
+  });
+
+  /* ---- ticks (whole page) ---- */
+  const gp = scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight);
+  const on = Math.round(gp * (TICKS - 1));
+  tickEls.forEach((el, i) => el.classList.toggle('on', i === on));
+
+  if (scrollY < max + innerHeight) composer.render();
+  requestAnimationFrame(frame);
+}
+
+/* =====================================================================
+   v3 — sections after the hero (GSAP ScrollTrigger + Flip, driven by Lenis)
+   ===================================================================== */
+gsap.registerPlugin(ScrollTrigger, Flip);
+lenis.on('scroll', ScrollTrigger.update);
+
+/* ---- posters drawn into DOM canvases (same generator as the 3D cards) ---- */
+function paint(cv, di) {
+  cv.width = CW; cv.height = CH;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const draw = () => drawPoster(ctx, designs[di], designImgs[di] || null);
+  draw();
+  if (!designImgs[di]) imgWaiters[di].push(draw);
+  document.fonts && document.fonts.ready.then(draw);
+}
+
+/* ---- (03) featured data ---- */
+const featured = [
+  { d: 0,  t: 'Deep Field',   by: 'Mira Okafor',       city: 'Lagos',       y: 2026, tech: 'Screen print', cat: 'abstract', q: 'I wanted the dark to feel generous, not empty.' },
+  { d: 4,  t: 'Quiet Voices', by: 'Oksana Hrytsenko',  city: 'Kyiv',        y: 2026, tech: 'Offset',       cat: 'type',     q: 'Written for the people who never get the microphone.' },
+  { d: 1,  t: 'Tide',         by: 'Joon Park',         city: 'Busan',       y: 2025, tech: 'Risograph',    cat: 'photo',    q: 'My grandmother counted days by the water line.' },
+  { d: 5,  t: 'B',            by: 'Felix Brandt',      city: 'Berlin',      y: 2026, tech: 'Letterpress',  cat: 'type',     q: 'One letter, set by hand, printed four hundred times.' },
+  { d: 3,  t: 'Blue Hour',    by: 'Studio Halde',      city: 'Oslo',        y: 2025, tech: 'Screen print', cat: 'abstract', q: 'The twenty minutes when the whole city is the same colour.' },
+  { d: 9,  t: 'Glass',        by: 'Léa Moreau',        city: 'Lyon',        y: 2026, tech: 'Inkjet',       cat: 'photo',    q: 'Shot through my neighbour’s window, with permission.' },
+  { d: 6,  t: 'Undertow',     by: 'Ana Ruiz',          city: 'Mexico City', y: 2026, tech: 'Risograph',    cat: 'abstract', q: 'Sixteen lines, sixteen people who left the same town.' },
+  { d: 13, t: 'Ø',            by: 'Nora Lind',         city: 'Bergen',      y: 2025, tech: 'Offset',       cat: 'type',     q: 'A letter that most of the world cannot type.' },
+  { d: 8,  t: 'Indigo',       by: 'Kenji Sato',        city: 'Tokyo',       y: 2026, tech: 'Cyanotype',    cat: 'photo',    q: 'Printed by the sun on my balcony, one hour each.' },
+  { d: 11, t: 'Kobalt 27',    by: 'Studio Vær',        city: 'Copenhagen',  y: 2026, tech: 'Screen print', cat: 'abstract', q: 'A target for attention, then a place to rest it.' },
+  { d: 2,  t: 'Azul',         by: 'Inês Duarte',       city: 'Lisbon',      y: 2025, tech: 'Offset',       cat: 'photo',    q: 'The tiles outside my school, from memory.' },
+  { d: 12, t: 'Wave Form',    by: 'Tomás Vega',        city: 'Bogotá',      y: 2026, tech: 'Letterpress',  cat: 'type',     q: 'A protest chant, drawn as a sound wave.' },
+];
+const grid = document.getElementById('grid');
+grid.innerHTML = featured.map((f, i) => `
+  <article class="fcard" data-cat="${f.cat}">
+    <div class="inner">
+      <div class="face front"><canvas class="poster" data-d="${f.d}"></canvas></div>
+      <div class="face back">
+        <div><span>№ ${String(i + 1).padStart(3, '0')}</span><h4>${f.t}</h4></div>
+        <q>${f.q}</q>
+        <dl><dt>By</dt><dd>${f.by}</dd><dt>City</dt><dd>${f.city}</dd><dt>Year</dt><dd>${f.y}</dd><dt>Print</dt><dd>${f.tech}</dd></dl>
+      </div>
+    </div>
+    <div class="cap"><span>${f.t}</span><span>${f.city}</span></div>
+  </article>`).join('');
+document.querySelectorAll('canvas.poster').forEach(cv => paint(cv, +cv.dataset.d));
+
+/* ---- generic reveals ---- */
+gsap.utils.toArray('.reveal').forEach(el => gsap.from(el, {
+  y: 26, opacity: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 88%' }
+}));
+gsap.utils.toArray('.sec .h2, .room-intro .h2').forEach(h => gsap.from(h.querySelectorAll('.mask > span'), {
+  yPercent: 112, rotate: 3, duration: 1.2, stagger: .09, ease: 'power4.out', scrollTrigger: { trigger: h, start: 'top 85%' }
+}));
+
+/* ---- (01) manifesto: words ink in as you read ---- */
+const mtext = document.getElementById('mtext');
+mtext.innerHTML = mtext.textContent.split(' ').map(w => `<span class="w">${w}</span>`).join(' ');
+gsap.to(mtext.querySelectorAll('.w'), {
+  color: '#0b1433', stagger: .12, ease: 'none',
+  scrollTrigger: { trigger: mtext, start: 'top 78%', end: 'bottom 42%', scrub: true }
+});
+gsap.utils.toArray('.floater').forEach(el => {
+  const s = +el.dataset.speed;
+  gsap.fromTo(el, { y: -s * 260, rotate: -s * 14 }, {
+    y: s * 260, rotate: s * 14, ease: 'none',
+    scrollTrigger: { trigger: '.manifesto', start: 'top bottom', end: 'bottom top', scrub: true }
+  });
+});
+
+/* ---- marquee: drifts on its own, speeds up and reverses with scroll ---- */
+const mrow = document.querySelector('.marquee .row');
+let mx = 0, mdir = -1;
+gsap.ticker.add(() => {
+  const v = lenis.velocity || 0;
+  if (Math.abs(v) > .5) mdir = v > 0 ? -1 : 1;
+  mx += mdir * (.6 + Math.min(Math.abs(v), 40) * .18);
+  const half = mrow.scrollWidth / 2;
+  if (mx <= -half) mx += half; if (mx > 0) mx -= half;
+  mrow.style.transform = `translate3d(${mx}px,0,0) skewX(${clamp(-v * .25, -8, 8)}deg)`;
+});
+
+/* ---- (02) rooms: pinned horizontal walk ---- */
+const track = document.getElementById('track');
+const roomsBar = document.getElementById('roomsBar');
+const roomsNum = document.getElementById('roomsNum');
+const hDist = () => track.scrollWidth - innerWidth;
+const hTween = gsap.to(track, {
+  x: () => -hDist(), ease: 'none',
+  scrollTrigger: {
+    trigger: '#rooms', start: 'top top', end: () => '+=' + hDist() * 1.1, pin: true, scrub: 1, invalidateOnRefresh: true,
+    onUpdate: s => {
+      roomsBar.style.transform = `scaleX(${s.progress})`;
+      roomsNum.textContent = `0${1 + Math.min(3, Math.floor(s.progress * 4.2))} / 04`;
+    }
+  }
+});
+gsap.utils.toArray('.room').forEach(room => {
+  const card = room.querySelector('.room-card'), info = room.querySelector('.room-info');
+  gsap.fromTo(card, { rotateY: -38, rotateZ: -5, scale: .78, opacity: .25 }, {
+    rotateY: 0, rotateZ: 0, scale: 1, opacity: 1, ease: 'none',
+    scrollTrigger: { trigger: room, containerAnimation: hTween, start: 'left 100%', end: 'left 45%', scrub: true }
+  });
+  gsap.fromTo(card, { rotateY: 0, scale: 1 }, {
+    rotateY: 30, scale: .9, ease: 'none', immediateRender: false,
+    scrollTrigger: { trigger: room, containerAnimation: hTween, start: 'right 35%', end: 'right -5%', scrub: true }
+  });
+  gsap.from(info.children, {
+    y: 50, opacity: 0, stagger: .1, ease: 'none',
+    scrollTrigger: { trigger: room, containerAnimation: hTween, start: 'left 80%', end: 'left 40%', scrub: true }
+  });
+  // pointer tilt
+  const tilt = card.querySelector('.tilt');
+  card.addEventListener('pointermove', e => {
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+    tilt.style.transform = `rotateY(${x * 18}deg) rotateX(${-y * 14}deg) translateZ(20px)`;
+  });
+  card.addEventListener('pointerleave', () => tilt.style.transform = '');
+});
+
+/* ---- (03) featured: cards rise in, flip on hover, Flip-filter ---- */
+const fcards = gsap.utils.toArray('.fcard');
+gsap.set(fcards, { opacity: 0, y: 90, rotateX: -22, transformPerspective: 1000 });
+ScrollTrigger.batch(fcards, {
+  start: 'top 92%', once: true,
+  onEnter: batch => gsap.to(batch, { opacity: 1, y: 0, rotateX: 0, duration: 1.1, stagger: .09, ease: 'power3.out' })
+});
+fcards.forEach(c => c.addEventListener('click', () => { if (matchMedia('(hover: none)').matches) c.classList.toggle('flipped'); }));
+
+document.getElementById('filters').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.classList.contains('on')) return;
+  document.querySelectorAll('#filters button').forEach(x => x.classList.toggle('on', x === b));
+  const f = b.dataset.f;
+  const state = Flip.getState(fcards, { props: 'opacity' });
+  fcards.forEach(c => c.style.display = (f === 'all' || c.dataset.cat === f) ? '' : 'none');
+  gsap.set(fcards, { opacity: 1, y: 0, rotateX: 0 });
+  Flip.from(state, {
+    duration: .85, ease: 'power3.inOut', stagger: .03, absolute: true, scale: true,
+    onEnter: els => gsap.fromTo(els, { opacity: 0, scale: .7, rotate: -4 }, { opacity: 1, scale: 1, rotate: 0, duration: .7, delay: .2, ease: 'power3.out' }),
+    onLeave: els => gsap.to(els, { opacity: 0, scale: .7, rotate: 4, duration: .45, ease: 'power2.in' }),
+    onComplete: () => ScrollTrigger.refresh()
+  });
+});
+
+addEventListener('load', () => ScrollTrigger.refresh());
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

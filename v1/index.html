@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Moveo — Motion Presets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f1f2f4;
+    --ink: #111214;
+    --muted: #5c5f66;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+
+  /* ---------- nav ---------- */
+  .nav {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+    width: min(1280px, calc(100% - 64px)); height: 52px; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 8px 0 18px; border-radius: 14px;
+    background: rgba(255,255,255,.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    font-size: 13px; transition: opacity .5s, transform .5s;
+  }
+  .nav.hide { opacity: 0; transform: translate(-50%, -12px); pointer-events: none; }
+  .logo { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 15px; letter-spacing: -.02em; }
+  .logo i { width: 18px; height: 18px; border-radius: 5px; background: var(--ink); display: grid; place-items: center; }
+  .logo i::after { content: ""; width: 8px; height: 5px; border: 2px solid #fff; border-top: 0; border-radius: 0 0 6px 6px; }
+  .links { display: flex; gap: 26px; }
+  .links a, .right a { color: var(--ink); text-decoration: none; }
+  .right { display: flex; align-items: center; gap: 20px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px;
+    border-radius: 999px; background: var(--ink); color: #fff !important; font-size: 13px; font-weight: 500;
+    text-decoration: none; border: 0; cursor: pointer;
+  }
+  .btn svg { width: 12px; height: 12px; }
+
+  /* ---------- stage ---------- */
+  #scroll { height: 900vh; position: relative; }
+  .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+  canvas#gl { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+
+  .hero { position: absolute; inset: 0; z-index: 1; padding: 0 max(32px, calc((100vw - 1280px)/2 + 24px)); }
+  .hero h1 {
+    position: absolute; top: 15vh; font-weight: 500; font-size: clamp(48px, 7.6vw, 118px);
+    line-height: .92; letter-spacing: -.055em;
+  }
+  .hero h1.l { left: max(32px, calc((100vw - 1280px)/2 + 24px)); }
+  .hero h1.r { right: max(32px, calc((100vw - 1280px)/2 + 24px)); text-align: right; }
+  .hero h1 span.ch { display: inline-block; will-change: transform, filter, opacity; }
+  .hero .meta { position: absolute; bottom: 8vh; left: 30%; font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .hero .meta p { max-width: 260px; }
+  .hero .meta p:nth-child(2) { margin: 14px 0 0 150px; }
+  .hero .meta p:nth-child(3) { margin: 14px 0 0 300px; }
+
+  .part {
+    position: absolute; z-index: 3; top: 50%; left: 58.5%; transform: translateY(-50%);
+    width: 36%; max-width: 520px;
+  }
+  .part h2 { font-weight: 500; font-size: clamp(44px, 5.6vw, 92px); line-height: .98; letter-spacing: -.05em; }
+  .part h2 .line { display: block; overflow: hidden; padding-bottom: .06em; }
+  .part h2 .line > span { display: inline-block; will-change: transform, filter, opacity; }
+  .part .sub { display: flex; flex-direction: column; font-size: 13px; font-weight: 500; line-height: 1.3; margin-top: 30px; }
+  .part .sub p { max-width: 230px; }
+  .part .sub p + p { margin: 10px 0 0 160px; }
+  .part .btn { margin-top: 34px; }
+  .part .fade { will-change: opacity, transform; }
+
+  /* scroll ticks */
+  .ticks { position: fixed; right: 18px; top: 40px; z-index: 60; display: flex; flex-direction: column; gap: 4px; }
+  .ticks i { display: block; width: 9px; height: 1px; background: #c4c6cb; transition: width .25s, background .25s; }
+  .ticks i.on { width: 14px; background: var(--ink); }
+
+  .after { height: 60vh; display: grid; place-items: center; color: var(--muted); font-size: 14px; }
+
+  @media (max-width: 860px) {
+    .links { display: none; }
+    .nav { width: calc(100% - 32px); }
+    .hero h1 { font-size: 13vw; }
+    .hero h1.r { top: 34vh; }
+    .hero .meta { left: 16px; right: 16px; }
+    .hero .meta p:nth-child(n) { margin-left: 0; }
+    .part { left: 16px; right: 16px; width: auto; top: auto; bottom: 6vh; transform: none; }
+    .part .sub p + p { margin-left: 0; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <div class="logo"><i></i>moveo</div>
+  <div class="links"><a href="#">Library</a><a href="#">How it works</a><a href="#">MCP</a><a href="#">Pricing</a><a href="#">Contact</a></div>
+  <div class="right"><a href="#">Sign in</a><a class="btn" href="#">Open moveo <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
+</nav>
+<div class="ticks" id="ticks"></div>
+
+<section id="scroll">
+  <div class="stage">
+    <div class="hero" id="hero">
+      <h1 class="l split">Designed<br>already</h1>
+      <h1 class="r split">Now make<br>it (we move)</h1>
+      <div class="meta" id="meta">
+        <p>Moveo turns finished design into polished motion — without sending you into a video editor</p>
+        <p>Drop in your work. Pick a starting point. Take it as far as you want</p>
+        <p>No account required</p>
+      </div>
+    </div>
+
+    <canvas id="gl"></canvas>
+
+    <div class="part" id="part">
+      <h2>
+        <span class="line"><span>Start with</span></span>
+        <span class="line"><span>the good</span></span>
+        <span class="line"><span>part</span></span>
+      </h2>
+      <div class="sub fade">
+        <p>Hundreds of handcrafted motion presets, built for designers.</p>
+        <p>Pick the movement. Drop in your work. Skip the blank timeline</p>
+      </div>
+      <a class="btn fade" href="#">Explore presets <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a>
+    </div>
+  </div>
+</section>
+<div style="position:fixed;left:16px;bottom:16px;z-index:99;font:600 11px Inter,sans-serif;letter-spacing:.06em;padding:6px 10px;border-radius:999px;background:#111;color:#fff">v1 · reference style</div>
+<div class="after">↓ the rest of the page</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ================= helpers ================= */
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const range = (p, a, b) => clamp((p - a) / (b - a));
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;      // easeInOutCubic
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+const rand = rng(42);
+
+/* ================= split hero text into letters ================= */
+document.querySelectorAll('.split').forEach(el => {
+  el.innerHTML = el.innerHTML.split(/(<br>)/).map(part => part === '<br>' ? part :
+    [...part].map(c => c === ' ' ? ' ' : `<span class="ch">${c}</span>`).join('')).join('');
+});
+const heroChars = [...document.querySelectorAll('.hero .ch')].map(el => ({ el, r: rand() }));
+
+/* ================= ticks ================= */
+const ticksEl = document.getElementById('ticks');
+const TICKS = 18;
+for (let i = 0; i < TICKS; i++) ticksEl.appendChild(document.createElement('i'));
+const tickEls = [...ticksEl.children];
+
+/* ================= posters (canvas textures) ================= */
+const RED = '#c4221b', DARK = '#151515', CREAM = '#e9e5dc', SKY = '#3f86c8', PAPER = '#f4f2ee';
+const designs = [
+  { bg: DARK,  title: 'Signal',   style: 'beam' },
+  { bg: RED,   title: 'Upward',   style: 'photoRed' },
+  { bg: CREAM, title: 'NØR',      style: 'photoTop' },
+  { bg: PAPER, title: 'Paper\nTakes\nFlight', style: 'plane' },
+  { bg: PAPER, title: 'Modern\nEssentials\nfor\nToday', style: 'essentials' },
+  { bg: RED,   title: 'R',        style: 'bigR' },
+  { bg: SKY,   title: '',         style: 'sky' },
+  { bg: CREAM, title: '',         style: 'photoFull' },
+  { bg: DARK,  title: 'Echo',     style: 'photoRed' },
+  { bg: '#d9d5cc', title: 'Still', style: 'photoTop' },
+  { bg: RED,   title: '',         style: 'photoFull' },
+  { bg: DARK,  title: 'Orbit',    style: 'beam' },
+];
+const CW = 512, CH = 712;
+
+function drawPoster(ctx, d, img) {
+  ctx.save();
+  ctx.fillStyle = d.bg; ctx.fillRect(0, 0, CW, CH);
+  const photo = (x, y, w, h, tint) => {
+    if (!img) { const g = ctx.createLinearGradient(x, y, x, y + h); g.addColorStop(0, '#888'); g.addColorStop(1, '#333'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); }
+    else {
+      const s = Math.max(w / img.width, h / img.height);
+      const iw = img.width * s, ih = img.height * s;
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+      ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
+      ctx.restore();
+    }
+    if (tint) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = tint; ctx.fillRect(x, y, w, h); ctx.restore(); }
+  };
+  const small = (txt, x, y, col = '#fff', a = 'left') => { ctx.font = '500 13px Inter, sans-serif'; ctx.fillStyle = col; ctx.textAlign = a; ctx.fillText(txt, x, y); };
+  const lines = (txt, x, y, size, col, weight = 700, lh = .95, family = 'Inter, sans-serif') => {
+    ctx.font = `${weight} ${size}px ${family}`; ctx.fillStyle = col; ctx.textAlign = 'left';
+    txt.split('\n').forEach((l, i) => ctx.fillText(l, x, y + i * size * lh));
+  };
+
+  switch (d.style) {
+    case 'beam': {
+      const g = ctx.createRadialGradient(CW * .55, CH * .5, 4, CW * .55, CH * .5, CW * .8);
+      g.addColorStop(0, '#ff6a2a'); g.addColorStop(.18, '#a3150f'); g.addColorStop(.6, '#2a0a08'); g.addColorStop(1, DARK);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+      ctx.save(); ctx.translate(CW * .55, CH * .5); ctx.rotate(-.5);
+      const b = ctx.createLinearGradient(-300, 0, 300, 0); b.addColorStop(0, 'rgba(255,90,40,0)'); b.addColorStop(.5, 'rgba(255,200,150,.95)'); b.addColorStop(1, 'rgba(255,90,40,0)');
+      ctx.fillStyle = b; ctx.fillRect(-300, -3, 600, 6); ctx.restore();
+      lines(d.title, 40, CH - 56, 78, '#fff', 400, 1, 'Georgia, serif');
+      small('VOL. 07', 40, 50, '#ddd'); small('2026', CW - 40, 50, '#ddd', 'right');
+      break;
+    }
+    case 'photoRed':
+      photo(0, 0, CW, CH, d.bg === RED ? '#e0352b' : '#7a1812');
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(0, CH - 170, CW, 170);
+      lines(d.title, 36, CH - 54, 92, '#fff', 800, 1, 'Georgia, serif');
+      small('NEW COLLECTION', 36, 48);
+      break;
+    case 'photoTop':
+      photo(0, 120, CW, CH - 120, null);
+      ctx.fillStyle = d.bg; ctx.fillRect(0, 0, CW, 120);
+      lines(d.title, 30, 100, 92, DARK, 500, 1);
+      small('ISSUE 12 — SPRING', CW - 30, 36, DARK, 'right');
+      break;
+    case 'plane': {
+      ctx.fillStyle = '#dfe3e8'; ctx.fillRect(0, 0, CW, CH);
+      ctx.save(); ctx.translate(CW * .55, CH * .34); ctx.rotate(-.2);
+      ctx.fillStyle = RED; ctx.beginPath(); ctx.moveTo(-170, 30); ctx.lineTo(170, -10); ctx.lineTo(-40, 40); ctx.lineTo(-90, 80); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#8f1610'; ctx.beginPath(); ctx.moveTo(-40, 40); ctx.lineTo(170, -10); ctx.lineTo(-20, 60); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      lines(d.title, 36, CH - 230, 78, '#3b3f46', 600, .95);
+      small('A STUDY IN MOTION', 36, 48, '#555');
+      break;
+    }
+    case 'essentials':
+      lines(d.title, 30, 92, 70, DARK, 700, .98);
+      ctx.fillStyle = RED; ctx.fillRect(30, 400, 210, 210);
+      photo(250, 300, CW - 250, CH - 300, null);
+      small('THE EDIT', CW - 30, 40, DARK, 'right');
+      break;
+    case 'bigR':
+      photo(CW * .45, 0, CW * .55, CH, '#f05a50');
+      ctx.font = '900 640px Inter, sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+      ctx.fillText('R', -40, CH - 60);
+      break;
+    case 'sky': {
+      const g = ctx.createLinearGradient(0, 0, 0, CH); g.addColorStop(0, '#1f5fa5'); g.addColorStop(1, '#9dc6ea');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+      photo(0, CH * .55, CW, CH * .45, null);
+      small('ELSEWHERE', 30, 46);
+      break;
+    }
+    case 'photoFull':
+      photo(0, 0, CW, CH, d.bg === RED ? '#e43a2f' : null);
+      small('FIELD NOTES', 30, 46, '#fff');
+      break;
+  }
+  ctx.restore();
+}
+
+const posterTextures = designs.map((d, i) => {
+  const c = document.createElement('canvas'); c.width = CW; c.height = CH;
+  const ctx = c.getContext('2d');
+  drawPoster(ctx, d, null);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  // fresh photos from picsum (grayscale, deterministic seeds)
+  const img = new Image(); img.crossOrigin = 'anonymous';
+  img.onload = () => { drawPoster(ctx, d, img); tex.needsUpdate = true; };
+  img.src = `https://picsum.photos/seed/moveo${i * 7 + 3}/600/820?grayscale`;
+  return tex;
+});
+document.fonts && document.fonts.ready.then(() => posterTextures.forEach(t => t.needsUpdate = true));
+
+/* ================= three setup ================= */
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, .1, 100);
+camera.position.set(0, 0, 20);
+
+/* rounded-corner card geometry */
+function roundedCard(w, h, r) {
+  const s = new THREE.Shape();
+  const x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  const g = new THREE.ShapeGeometry(s, 6);
+  const uv = g.attributes.uv, p = g.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (p.getX(i) - x) / w, (p.getY(i) - y) / h);
+  return g;
+}
+const CARD_W = 1, CARD_H = CARD_W * CH / CW;
+const geo = roundedCard(CARD_W, CARD_H, .045);
+
+const COLS = 9, ROWS = 7, N = COLS * ROWS;
+const cards = [];
+for (let i = 0; i < N; i++) {
+  const mat = new THREE.MeshBasicMaterial({ map: posterTextures[(i * 5 + (i / COLS | 0)) % designs.length], side: THREE.DoubleSide, transparent: true });
+  const m = new THREE.Mesh(geo, mat);
+  scene.add(m);
+  const col = i % COLS, row = (i / COLS) | 0;
+  cards.push({
+    m, col, row,
+    // scatter state
+    // ~16 cards float inside the hero; the rest wait outside the frame and fly in
+    sp: i % 4 === 0
+      ? new THREE.Vector3((rand() - .5) * 15, (rand() - .5) * 8.5, -1 - rand() * 6 + (rand() < .3 ? 5 : 0))
+      : (() => { const a = rand() * Math.PI * 2; return new THREE.Vector3(Math.cos(a) * (12 + rand() * 6), Math.sin(a) * (8 + rand() * 4), -4 + rand() * 10); })(),
+    sr: new THREE.Euler((rand() - .5) * 1.4, (rand() - .5) * 1.8, (rand() - .5) * 1.2),
+    spin: new THREE.Vector3((rand() - .5), (rand() - .5), (rand() - .5)).multiplyScalar(.6),
+    phase: rand() * Math.PI * 2,
+    delay: rand(),
+  });
+}
+
+/* ================= post-processing: velocity chromatic blur ================= */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const caPass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uDir: { value: new THREE.Vector2(0, 0) }, uBase: { value: 0 }, uClip: { value: 1.5 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform vec2 uDir; uniform float uBase; uniform float uClip; varying vec2 vUv;
+    void main(){
+      vec2 c = vUv - .5;
+      float edge = smoothstep(.0, .7, length(c));
+      vec2 d = uDir * (.35 + edge) + c * uBase * edge;
+      vec4 acc = vec4(0.); float r = 0., g = 0., b = 0., a = 0.;
+      for (int i = 0; i < 8; i++) {
+        float t = float(i) / 7. - .5;
+        vec4 sr = texture2D(tDiffuse, vUv + d * (t + .6));
+        vec4 sg = texture2D(tDiffuse, vUv + d * t);
+        vec4 sb = texture2D(tDiffuse, vUv + d * (t - .6));
+        r += sr.r * sr.a; g += sg.g * sg.a; b += sb.b * sb.a; a += max(max(sr.a, sg.a), sb.a);
+      }
+      a /= 8.; r /= 8.; g /= 8.; b /= 8.;
+      // un-premultiply for the transparent canvas
+      if (vUv.x > uClip) a = 0.;  // hard vertical mask while the copy is on screen
+      gl_FragColor = a > 0.001 ? vec4(vec3(r, g, b) / a, a) : vec4(0.);
+    }`
+});
+composer.addPass(caPass);
+composer.addPass(new OutputPass());
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); composer.setSize(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+/* ================= smooth scroll ================= */
+const lenis = new Lenis({ lerp: .085, wheelMultiplier: .9 });
+const scrollEl = document.getElementById('scroll');
+
+/* ================= state math ================= */
+const tmpQ = new THREE.Quaternion(), qA = new THREE.Quaternion(), qB = new THREE.Quaternion(), qC = new THREE.Quaternion();
+const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
+const e = new THREE.Euler();
+const gridEuler = new THREE.Euler(-1.02, .28, .62, 'XYZ');
+const gridQ = new THREE.Quaternion().setFromEuler(gridEuler);
+
+function viewWidthAt(z) { return 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (camera.position.z - z) * camera.aspect; }
+
+const nav = document.getElementById('nav');
+const part = document.getElementById('part');
+const partLines = [...part.querySelectorAll('.line > span')];
+const partFades = [...part.querySelectorAll('.fade')];
+const meta = document.getElementById('meta');
+
+let lastP = 0, vel = 0, clock = new THREE.Clock(), driftX = 0;
+
+function frame(time) {
+  lenis.raf(time);
+  const t = clock.getElapsedTime();
+  const dt = Math.min(clock.getDelta ? .016 : .016, .05);
+
+  const max = scrollEl.offsetHeight - innerHeight;
+  const p = clamp(scrollY / max);
+  vel = lerp(vel, (p - lastP) * 60, .2); lastP = p;
+
+  /* ---- phase weights ---- */
+  const toRing = range(p, .06, .30);      // scatter -> ring
+  const toGrid = range(p, .36, .64);      // ring -> grid (staggered)
+  const ringSpin = p * 7.5 + t * .08;     // ring keeps rotating with scroll
+  const narrow = innerWidth < 860;
+  const vwRef = viewWidthAt(0);
+
+  // ring placement
+  const R = 3.7;
+  const ringCenter = vA.set(0, -.45, 0);
+  const ringTiltQ = qA.setFromEuler(e.set(.24, 0, 0));
+
+  // grid placement (left side)
+  const gx0 = narrow ? -.5 : -vwRef * .2, gy0 = narrow ? 1.6 : .2;
+  const GS = 1.4; // grid card scale
+  driftX = p * 3.2 + t * .05;
+
+  cards.forEach((c, i) => {
+    const m = c.m;
+    /* --- scatter --- */
+    const fl = Math.sin(t * .6 + c.phase);
+    const sp = vB.copy(c.sp);
+    sp.y += fl * .25 + p * 6 * (c.sp.z + 12) / 10;   // parallax upward on scroll
+    sp.x += Math.cos(t * .4 + c.phase) * .2;
+    const sQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(
+      c.sr.x + t * c.spin.x * .3 + p * 4 * c.spin.x,
+      c.sr.y + t * c.spin.y * .3 + p * 4 * c.spin.y,
+      c.sr.z + t * c.spin.z * .2));
+
+    /* --- ring --- */
+    const th = (i / N) * Math.PI * 2 + ringSpin;
+    const rp = new THREE.Vector3(Math.sin(th) * R, 0, Math.cos(th) * R).applyQuaternion(ringTiltQ).add(ringCenter);
+    const rQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, th + Math.PI / 2 * .82, 0));
+    rQ.premultiply(ringTiltQ);
+
+    /* --- grid --- */
+    let cx = c.col - (COLS - 1) / 2, cy = (ROWS - 1) / 2 - c.row;
+    const SX = 1.16 * GS, SY = 1.56 * GS;
+    let lx = cx * SX + driftX * GS;
+    lx = ((lx + COLS * SX / 2) % (COLS * SX) + COLS * SX) % (COLS * SX) - COLS * SX / 2;  // wrap for endless drift
+    const gp = new THREE.Vector3(lx, cy * SY, 0).applyQuaternion(gridQ).add(vC.set(gx0, gy0, 1.2));
+
+    /* --- blend --- */
+    const k1 = ease(clamp(toRing * 1.35 - c.delay * .35));
+    const order = ((i / N) + (ringSpin / (Math.PI * 2))) % 1;           // peel order follows the ring
+    const k2 = ease(clamp(toGrid * 1.7 - order * .7));
+
+    const pos = new THREE.Vector3().lerpVectors(sp, rp, k1);
+    // little lift arc while flying from ring to grid
+    const arc = Math.sin(k2 * Math.PI) * 1.4;
+    pos.lerp(gp, k2); pos.z += arc;
+    const q = new THREE.Quaternion().slerpQuaternions(sQ, rQ, k1).slerp(gridQ, k2);
+
+    m.position.copy(pos);
+    m.quaternion.copy(q);
+    const sc = lerp(lerp(1.15, 1.3, k1), GS, k2);
+    m.scale.setScalar(sc);
+    // fade grid edges into the page on the right side
+    m.material.opacity = 1;
+  });
+
+  /* ---- chromatic blur strength ---- */
+  const scatterAmt = 1 - toRing;
+  caPass.uniforms.uDir.value.set(0, clamp(vel * .9, -.03, .03) + .0);
+  caPass.uniforms.uBase.value = .012 * scatterAmt + Math.abs(vel) * .05;
+  caPass.uniforms.uClip.value = narrow ? 1.5 : lerp(1.5, .5, easeOut(range(p, .6, .67))) + easeOut(range(p, .92, .98)) * 1;
+
+  /* ---- hero text ---- */
+  const heroOut = range(p, .0, .09);
+  heroChars.forEach(({ el, r }) => {
+    const k = clamp(heroOut * 1.8 - r * .8);
+    el.style.opacity = 1 - k;
+    el.style.filter = `blur(${k * 14}px)`;
+    el.style.transform = `translateY(${-k * 40}px) scale(${1 + k * .3})`;
+  });
+  meta.style.opacity = 1 - range(p, .0, .05);
+  nav.classList.toggle('hide', p > .05);
+
+  /* ---- "Start with the good part" ---- */
+  const inP = range(p, .58, .72), outP = range(p, .9, .97);
+  partLines.forEach((el, i) => {
+    const k = easeOut(clamp(inP * 1.6 - i * .2)) * (1 - easeOut(clamp(outP * 1.6 - i * .2)));
+    const dir = outP > 0 ? -1 : 1;
+    el.style.transform = `translateY(${(1 - k) * 105 * dir}%)`;
+    el.style.opacity = k;
+    el.style.filter = `blur(${(1 - k) * 8}px)`;
+  });
+  partFades.forEach((el, i) => {
+    const k = clamp(inP * 1.5 - .4 - i * .1) * (1 - clamp(outP * 2));
+    el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * 14}px)`;
+  });
+
+  /* ---- ticks ---- */
+  const on = Math.round(p * (TICKS - 1));
+  tickEls.forEach((el, i) => el.classList.toggle('on', i === on));
+
+  composer.render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
