@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blauwerk × Submit a poster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #eef1f8; --card: #f7f8fb; --ink: #0b1433; --sub: #7a829c; --blue: #1f45e6; --line: #d5dbeb; --err: #d4421f; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  .bar { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 22px 28px; background: rgba(238,241,248,.86); backdrop-filter: blur(10px); }
+  .bar .back { font-size: 13px; color: var(--sub); text-decoration: none; justify-self: start; } .bar .back:hover { color: var(--ink); }
+  .bar .mid { display: flex; align-items: center; gap: 12px; }
+  .bar .mid a { text-decoration: none; font-family: "Instrument Serif", Georgia, serif; font-size: 19px; }
+  .bar .mid i { font-style: normal; color: var(--sub); font-size: 12px; } .bar .mid b { font-size: 17px; letter-spacing: -.03em; }
+  .bar .dl { justify-self: end; font-size: 13px; color: var(--sub); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 6vh 28px 14vh; display: grid; grid-template-columns: 1fr 380px; gap: 80px; align-items: start; }
+  h1 { font-weight: 500; font-size: clamp(40px, 5.4vw, 84px); letter-spacing: -.055em; line-height: .98; }
+  .intro { margin-top: 22px; max-width: 520px; color: var(--sub); font-size: 16px; line-height: 1.55; }
+  form { margin-top: 7vh; }
+  fieldset { border: 0; border-top: 1px solid var(--line); padding: 34px 0 38px; display: grid; grid-template-columns: 180px 1fr; gap: 24px; }
+  legend { display: contents; }
+  .lg { font-size: 13px; color: var(--sub); padding-top: 6px; } .lg b { display: block; color: var(--ink); font-weight: 500; font-size: 15px; margin-top: 6px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 16px; }
+  .f { display: flex; flex-direction: column; gap: 8px; } .f.full { grid-column: 1 / -1; }
+  label { font-size: 13px; color: var(--sub); }
+  input[type=text], input[type=email], select, textarea { font: 400 16px Inter, sans-serif; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; outline: none; transition: border-color .25s, box-shadow .25s; width: 100%; }
+  textarea { resize: vertical; min-height: 110px; line-height: 1.5; }
+  input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(31,69,230,.12); }
+  .bad input, .bad select, .bad textarea, .bad .drop, .bad .rooms { border-color: var(--err) !important; }
+  .msg { font-size: 12px; color: var(--err); min-height: 0; display: none; } .bad .msg { display: block; }
+  .hint { font-size: 12px; color: var(--sub); display: flex; justify-content: space-between; }
+  .drop { position: relative; border: 1.5px dashed var(--line); border-radius: 16px; background: var(--card); padding: 34px 20px; text-align: center; cursor: pointer; transition: border-color .25s, background .25s; }
+  .drop:hover, .drop.over { border-color: var(--blue); background: #f2f5ff; }
+  .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .drop b { font-weight: 500; } .drop p { margin-top: 6px; font-size: 13px; color: var(--sub); }
+  .drop .file { margin-top: 10px; font-size: 13px; color: var(--blue); }
+  .rooms { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 1px solid transparent; border-radius: 14px; }
+  .room { position: relative; display: block; border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 16px 16px 18px; cursor: pointer; transition: border-color .25s, background .25s; }
+  .room input { position: absolute; opacity: 0; }
+  .room span { font-size: 12px; color: var(--sub); } .room h4 { margin-top: 6px; font-weight: 500; font-size: 17px; letter-spacing: -.02em; } .room p { margin-top: 6px; font-size: 13px; color: var(--sub); line-height: 1.45; }
+  .room:hover { border-color: #aab6d6; }
+  .room:has(input:checked) { border-color: var(--ink); background: #fff; box-shadow: inset 0 0 0 1px var(--ink); }
+  .checks { display: grid; gap: 12px; }
+  .chk { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.45; cursor: pointer; }
+  .chk input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--blue); flex: none; }
+  .send { display: flex; align-items: center; gap: 22px; margin-top: 10px; padding-top: 34px; border-top: 1px solid var(--line); }
+  .btn { display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 22px; border-radius: 999px; background: var(--ink); color: #fff; border: 0; font: 500 14px Inter, sans-serif; cursor: pointer; text-decoration: none; transition: background .3s; }
+  .btn:hover { background: var(--blue); } .btn svg { width: 12px; height: 12px; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); } .btn.ghost:hover { border-color: var(--ink); background: transparent; }
+  .send small { font-size: 13px; color: var(--sub); }
+  /* live preview */
+  aside { position: sticky; top: 100px; }
+  .pv { background: #fbfaf6; padding: 14px 14px 16px; border-radius: 6px; box-shadow: 0 30px 60px -36px rgba(11,20,51,.45), 0 2px 6px rgba(11,20,51,.06); transform: rotate(-1.4deg); transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  aside:hover .pv { transform: rotate(0); }
+  .pv .img { position: relative; aspect-ratio: 512/712; background: #e3e8f4; overflow: hidden; }
+  .pv canvas, .pv img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pv .cap { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 13px; } .pv .cap b { font-weight: 600; } .pv .cap span { color: var(--sub); }
+  .peg { position: absolute; top: -12px; width: 8px; height: 26px; border-radius: 2px; background: linear-gradient(90deg, #b99360, #ecd6ab 45%, #a37946); z-index: 2; }
+  .pvwrap { position: relative; } .pvwrap .peg.l { left: 14%; } .pvwrap .peg.r { right: 14%; }
+  .pvnote { margin-top: 22px; font-size: 13px; color: var(--sub); line-height: 1.55; }
+  .meta { margin-top: 18px; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 13px; } .meta dt { color: var(--sub); }
+  /* done */
+  .done { position: fixed; inset: 0; z-index: 40; background: var(--bg); display: grid; place-items: center; padding: 28px; opacity: 0; pointer-events: none; transition: opacity .6s; }
+  .done.on { opacity: 1; pointer-events: auto; }
+  .done .in { max-width: 620px; text-align: center; }
+  .done .tag { display: inline-block; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; }
+  .done h2 { margin-top: 22px; font-weight: 500; font-size: clamp(36px, 4.6vw, 64px); letter-spacing: -.05em; line-height: 1; }
+  .done p { margin-top: 18px; color: var(--sub); line-height: 1.55; }
+  .done .row { margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .done .mini { width: 150px; margin: 30px auto 0; transform: rotate(2deg); }
+  @media (max-width: 900px) {
+    .bar { grid-template-columns: auto 1fr; padding: 16px; } .bar .dl { display: none; } .bar .mid { justify-self: end; }
+    .wrap { grid-template-columns: 1fr; gap: 40px; padding: 4vh 16px 12vh; }
+    aside { display: none; }
+    .bar .mid a, .bar .mid i { display: none; }
+    fieldset { grid-template-columns: 1fr; gap: 14px; }
+    .fields, .rooms { grid-template-columns: 1fr; }
+    .send { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="back" href="index.html">← Back to Blauwerk</a>
+  <div class="mid"><a href="index.html">Blauwerk</a><i>×</i><b>Submit a poster</b></div>
+  <span class="dl">Deadline 14 March 2027</span>
+</header>
+
+<main class="wrap">
+  <section>
+    <h1>Put your poster<br>on the wall</h1>
+    <p class="intro">Free to enter, from anywhere. One poster per person, printed at least once in the real world. Every entry is looked at by a human — you’ll hear back before the wall opens on 12 June.</p>
+
+    <form id="form" novalidate>
+      <fieldset>
+        <legend><div class="lg">01<b>About you</b></div></legend>
+        <div class="fields">
+          <div class="f" data-req><label for="name">Name or studio</label><input type="text" id="name" autocomplete="name" placeholder="Mira Okafor" /><span class="msg">Tell us who made it.</span></div>
+          <div class="f" data-req data-email><label for="email">Email</label><input type="email" id="email" autocomplete="email" placeholder="you@example.com" /><span class="msg">We need a working email to reply.</span></div>
+          <div class="f" data-req><label for="city">City</label><input type="text" id="city" autocomplete="address-level2" placeholder="Lagos" /><span class="msg">Which city is it from?</span></div>
+          <div class="f"><label for="country">Country</label><input type="text" id="country" autocomplete="country-name" placeholder="Nigeria" /></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><div class="lg">02<b>The poster</b></div></legend>
+        <div class="fields">
+          <div class="f full" data-req data-file>
+            <label>Poster file</label>
+            <div class="drop" id="drop"><input type="file" id="file" accept="image/*" /><b>Drop your poster here</b><p>or click to choose — JPG or PNG, portrait, up to 20 MB</p><div class="file" id="fileName"></div></div>
+            <span class="msg">Add the poster itself — a photo of the print is fine.</span>
+          </div>
+          <div class="f" data-req><label for="title">Title</label><input type="text" id="title" maxlength="40" placeholder="Deep Field" /><span class="msg">Give it a title.</span></div>
+          <div class="f"><label for="tech">Printed with</label><select id="tech"><option>Screen print</option><option>Risograph</option><option>Offset</option><option>Letterpress</option><option>Cyanotype</option><option>Inkjet</option><option>Something else</option></select></div>
+          <div class="f full"><label for="note">A sentence about it <span id="left">(160 left)</span></label><textarea id="note" maxlength="160" placeholder="I wanted the dark to feel generous, not empty."></textarea></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><div class="lg">03<b>Which room?</b></div></legend>
+        <div class="f" data-req data-radio>
+          <div class="rooms">
+            <label class="room"><input type="radio" name="room" value="1" /><span>Room 01</span><h4>Neighbours</h4><p>The people next door, shared walls, small rules.</p></label>
+            <label class="room"><input type="radio" name="room" value="2" /><span>Room 02</span><h4>Climate &amp; care</h4><p>What we borrow from a place, and give back.</p></label>
+            <label class="room"><input type="radio" name="room" value="3" /><span>Room 03</span><h4>Memory</h4><p>Family archives, lost languages, old faces.</p></label>
+            <label class="room"><input type="radio" name="room" value="4" /><span>Room 04</span><h4>Tomorrow’s type</h4><p>Letterforms for readers who don’t exist yet.</p></label>
+          </div>
+          <span class="msg">Pick the room it belongs in — the jury can still move it.</span>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><div class="lg">04<b>Last thing</b></div></legend>
+        <div class="checks">
+          <div class="f" data-req data-check><label class="chk"><input type="checkbox" id="own" /> I made this poster (or I’m sending it with the maker’s permission) and it has been printed at least once.</label><span class="msg">Please confirm this one.</span></div>
+          <label class="chk"><input type="checkbox" id="show" checked /> Blauwerk may show it on the wall and in the archive. I keep all rights and can ask to remove it at any time.</label>
+        </div>
+      </fieldset>
+
+      <div class="send"><button class="btn" type="submit">Send to the jury <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></button><small>This is a demo — nothing is uploaded or sent anywhere.</small></div>
+    </form>
+  </section>
+
+  <aside>
+    <div class="pvwrap"><i class="peg l"></i><i class="peg r"></i>
+      <div class="pv"><div class="img" id="pvImg"><canvas id="pvCanvas"></canvas></div><div class="cap"><b id="pvTitle">Your poster</b><span id="pvNum">№ —</span></div></div>
+    </div>
+    <p class="pvnote">This is how it will hang on the wall. Until you add a file, we show one of this year’s posters.</p>
+    <dl class="meta"><dt>By</dt><dd id="pvBy">—</dd><dt>City</dt><dd id="pvCity">—</dd><dt>Room</dt><dd id="pvRoom">—</dd></dl>
+  </aside>
+</main>
+
+<div class="done" id="done"><div class="in">
+  <span class="tag" id="doneTag">Entry № 1201</span>
+  <h2>It’s on its way<br>to the wall.</h2>
+  <p id="doneText">Thank you. The jury reads every entry; you’ll get an answer by email before 12 June.</p>
+  <div class="mini"><div class="pv"><div class="img" id="doneImg"></div><div class="cap"><b id="doneTitle"></b><span>Blauwerk 27</span></div></div></div>
+  <div class="row"><a class="btn" href="archive.html">Walk the archive <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a><a class="btn ghost" href="index.html">Back to Blauwerk</a><button class="btn ghost" id="again" type="button">Submit another</button></div>
+</div></div>
+
+<script src="posters.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const ROOMS = { 1: 'Neighbours', 2: 'Climate & care', 3: 'Memory', 4: 'Tomorrow’s type' };
+const sample = Math.floor(Math.random() * BW.designs.length);
+BW.paint($('pvCanvas'), sample);
+let fileURL = null;
+
+const sync = () => {
+  const t = $('title').value.trim(), r = document.querySelector('input[name=room]:checked');
+  $('pvTitle').textContent = t || (fileURL ? 'Untitled' : BW.designs[sample].name);
+  $('pvNum').textContent = fileURL || t ? '№ 1201' : '№ ' + BW.designs[sample].num;
+  $('pvBy').textContent = $('name').value.trim() || '—';
+  $('pvCity').textContent = [$('city').value.trim(), $('country').value.trim()].filter(Boolean).join(', ') || '—';
+  $('pvRoom').textContent = r ? ROOMS[r.value] : '—';
+  $('left').textContent = `(${160 - $('note').value.length} left)`;
+};
+document.querySelectorAll('input, select, textarea').forEach(el => el.addEventListener('input', () => { sync(); el.closest('.f')?.classList.remove('bad'); }));
+document.querySelectorAll('input[name=room]').forEach(el => el.addEventListener('change', () => { sync(); el.closest('.f').classList.remove('bad'); }));
+
+/* file: read locally, never uploaded */
+function takeFile(f) {
+  if (!f || !f.type.startsWith('image/')) return;
+  if (fileURL) URL.revokeObjectURL(fileURL);
+  fileURL = URL.createObjectURL(f);
+  $('pvImg').innerHTML = `<img src="${fileURL}" alt="">`;
+  $('fileName').textContent = f.name + ' · ' + (f.size / 1048576).toFixed(1) + ' MB';
+  $('drop').closest('.f').classList.remove('bad'); sync();
+}
+$('file').addEventListener('change', e => takeFile(e.target.files[0]));
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, () => drop.classList.remove('over')));
+drop.addEventListener('drop', e => { e.preventDefault(); takeFile(e.dataTransfer.files[0]); });
+
+$('form').addEventListener('submit', e => {
+  e.preventDefault();
+  let first = null;
+  document.querySelectorAll('[data-req]').forEach(f => {
+    let ok;
+    if (f.hasAttribute('data-file')) ok = !!fileURL;
+    else if (f.hasAttribute('data-radio')) ok = !!document.querySelector('input[name=room]:checked');
+    else if (f.hasAttribute('data-check')) ok = f.querySelector('input').checked;
+    else { const v = f.querySelector('input, textarea, select').value.trim(); ok = f.hasAttribute('data-email') ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) : !!v; }
+    f.classList.toggle('bad', !ok); if (!ok && !first) first = f;
+  });
+  if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  const n = 1201 + Math.floor(Math.random() * 40);
+  $('doneTag').textContent = 'Entry № ' + n;
+  $('doneTitle').textContent = $('title').value.trim();
+  $('doneImg').innerHTML = `<img src="${fileURL}" alt="">`;
+  const r = document.querySelector('input[name=room]:checked').value;
+  $('doneText').textContent = `Thank you, ${$('name').value.trim()}. “${$('title').value.trim()}” is filed under Room 0${r} — ${ROOMS[r]}. The jury reads every entry; you’ll get an answer by email before 12 June.`;
+  $('done').classList.add('on'); scrollTo(0, 0);
+});
+$('again').addEventListener('click', () => { $('form').reset(); fileURL = null; $('pvImg').innerHTML = '<canvas id="pvCanvas"></canvas>'; BW.paint($('pvCanvas'), sample); $('fileName').textContent = ''; sync(); $('done').classList.remove('on'); });
+sync();
+</script>
+</body>
+</html>
