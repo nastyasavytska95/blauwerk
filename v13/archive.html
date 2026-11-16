@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blauwerk × The Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #f7f8fb; --ink: #0b1433; --sub: #7a829c; --blue: #1f45e6; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .top { position: fixed; top: 28px; left: 0; right: 0; z-index: 10; display: flex; justify-content: center; align-items: center; gap: 14px; font-size: 15px; }
+  .top a { color: inherit; text-decoration: none; font-family: "Instrument Serif", Georgia, serif; font-size: 19px; }
+  .top i { font-style: normal; color: var(--sub); font-size: 12px; }
+  .top b { font-weight: 700; letter-spacing: -.03em; font-size: 17px; }
+  .back { position: fixed; top: 30px; left: 28px; z-index: 10; font-size: 13px; color: var(--sub); text-decoration: none; }
+  .back:hover { color: var(--ink); }
+  .count { position: fixed; top: 30px; right: 28px; z-index: 10; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .stage { position: fixed; inset: 0; cursor: grab; touch-action: none; }
+  .stage.drag { cursor: grabbing; }
+  .ring { position: absolute; left: 50%; top: 44%; }
+  .item { position: absolute; left: 0; top: 0; width: 170px; margin-left: -85px; margin-top: -160px; cursor: pointer; will-change: transform; }
+  .item canvas { display: block; width: 100%; aspect-ratio: 512/712; box-shadow: 0 18px 40px -22px rgba(11,20,51,.4); transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  .item:hover canvas { transform: translateY(-8px); }
+  .item .cap { margin-top: 14px; font-size: 11px; line-height: 1.45; color: var(--sub); }
+  .item .cap em { display: block; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 17px; color: var(--ink); line-height: 1.1; margin-bottom: 4px; }
+  .foot { position: fixed; left: 50%; bottom: 5.5vh; transform: translateX(-50%); width: min(520px, 90vw); text-align: center; z-index: 10; }
+  .foot h1 { font-weight: 500; font-size: 15px; letter-spacing: -.01em; }
+  .foot p { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--sub); }
+  .ln-mask { display: block; overflow: clip; } .ln { display: block; }
+  /* lightbox */
+  .lb { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: auto 320px; gap: 56px; align-items: center; justify-content: center; background: rgba(247,248,251,.94); backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transition: opacity .45s; }
+  .lb.on { opacity: 1; pointer-events: auto; }
+  .lb canvas { height: min(74vh, 720px); width: auto; aspect-ratio: 512/712; box-shadow: 0 40px 80px -40px rgba(11,20,51,.5); transform: translateY(20px) scale(.96); transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  .lb.on canvas { transform: none; }
+  .lb .info em { display: block; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 44px; line-height: 1; }
+  .lb .info dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 18px; margin-top: 28px; font-size: 13px; }
+  .lb .info dt { color: var(--sub); }
+  .lb .info q { display: block; margin-top: 26px; font-size: 15px; line-height: 1.45; color: #384063; }
+  .lb .close { position: absolute; top: 28px; right: 28px; font: 400 13px Inter, sans-serif; background: none; border: 0; color: var(--sub); cursor: pointer; }
+  .ver { position: fixed; left: 16px; bottom: 16px; z-index: 99; font: 600 11px Inter, sans-serif; letter-spacing: .06em; padding: 6px 10px; border-radius: 999px; background: #0b1433; color: #fff; }
+  @media (max-width: 760px) { .back { font-size: 0; } .back::before { content: '←'; font-size: 20px; color: var(--ink); } .count { display: none; } .top { top: 24px; } .foot p .ln { display: inline; } .foot { bottom: 4vh; } .lb { grid-template-columns: 1fr; gap: 20px; padding: 20px; } .lb canvas { height: 50vh; } .item { width: 140px; margin-left: -70px; margin-top: -130px; } }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Back to Blauwerk</a>
+<div class="top"><a href="index.html">Blauwerk</a><i>×</i><b>The Archive</b></div>
+<div class="count" id="count">001 / 030</div>
+<div class="stage" id="stage"><div class="ring" id="ring"></div></div>
+<div class="foot">
+  <h1><span class="ln-mask"><span class="ln">Edition 04 · 1,200 posters from 64 countries</span></span></h1>
+  <p><span class="ln-mask"><span class="ln">A first room of the full wall. Drag, scroll or use the arrow keys</span></span><span class="ln-mask"><span class="ln">to walk around — click any poster to look closer.</span></span></p>
+</div>
+<div class="lb" id="lb"><button class="close" id="lbClose">Close ✕</button><canvas id="lbCanvas"></canvas><div class="info" id="lbInfo"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="posters.js"></script>
+<script>
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+/* ================= posters: shared generator (posters.js, v13) ================= */
+const { CW, CH, designs } = BW;
+const paint = (cv, di) => BW.paint(cv, di);
+
+const NAMES = ['Mira Okafor', 'Joon Park', 'Inês Duarte', 'Studio Halde', 'Oksana Hrytsenko', 'Felix Brandt', 'Ana Ruiz', 'Kenji Sato', 'Léa Moreau', 'Studio Vær', 'Tomás Vega', 'Nora Lind', 'Amara Eze', 'Yuki Tanabe', 'Rafael Couto', 'Ingrid Solberg', 'Diego Llano', 'Priya Raman'];
+const CITYS = ['Lagos', 'Busan', 'Lisbon', 'Oslo', 'Kyiv', 'Berlin', 'Mexico City', 'Tokyo', 'Lyon', 'Copenhagen', 'Bogotá', 'Bergen', 'Accra', 'Seoul', 'São Paulo', 'Reykjavík', 'Mumbai', 'Cairo'];
+const TECH = ['Screen print', 'Risograph', 'Offset', 'Letterpress', 'Cyanotype', 'Inkjet'];
+const TITLES = ['Deep Field', 'Tide', 'Azul', 'Blue Hour', 'Quiet Voices Carry', 'B', 'Undertow', 'Night Shift', 'Indigo', 'Glass', 'Low Tide', 'Kobalt 27', 'Wave Form', 'Ø', 'Open Window', 'Common Ground', 'Second Language', 'The Long Queue'];
+const DTITLES = ['Deep Field', 'Tide', 'Azul', 'Blue Hour', 'Quiet Voices Carry', 'B', 'Undertow', 'Field Notes', 'Indigo', 'Glass', 'Night Swim', 'Kobalt 27', 'Wave Form', 'Ø'];
+const N = 30, STEP = 360 / N;
+const items = Array.from({ length: N }, (_, i) => {
+  const d = (i * 4 + 1) % designs.length;
+  const data = { d, t: designs[d].name, by: NAMES[(i * 7) % NAMES.length], city: CITYS[(i * 5) % CITYS.length], y: 2025 + (i % 2), tech: TECH[i % TECH.length], n: i + 1 };
+  const el = document.createElement('div'); el.className = 'item';
+  el.innerHTML = `<canvas></canvas><div class="cap"><em>${data.t}</em>${data.by}<br>${data.city}, ${data.y}<br>${data.tech}</div>`;
+  document.getElementById('ring').appendChild(el);
+  el.addEventListener('click', () => { if (!moved && !lbOpen) openLb(data); });
+  paint(el.querySelector('canvas'), d);
+  return { el, data, a: i * STEP, k: 0 };
+});
+
+/* rotation: wheel / drag / keys, with inertia and a slow drift */
+let rot = 0, target = 0, dragging = false, lastX = 0, downX = 0, moved = false, vel = 0;
+const stage = document.getElementById('stage');
+addEventListener('wheel', e => { target -= (e.deltaY + e.deltaX) * .05; }, { passive: true });
+stage.addEventListener('pointerdown', e => { dragging = true; moved = false; lastX = downX = e.clientX; stage.classList.add('drag'); });
+addEventListener('pointermove', e => { if (!dragging) return; const dx = e.clientX - lastX; lastX = e.clientX; if (Math.abs(e.clientX - downX) > 8) moved = true; target += dx * .12; vel = dx * .12; });
+addEventListener('pointerup', () => { dragging = false; stage.classList.remove('drag'); target += vel * 6; vel = 0; setTimeout(() => moved = false, 0); });
+addEventListener('keydown', e => { if (e.key === 'ArrowRight') target -= STEP; if (e.key === 'ArrowLeft') target += STEP; if (e.key === 'Escape') closeLb(); });
+
+const intro = { k: 0 };
+gsap.to(intro, { k: 1, duration: 2.4, ease: 'power3.out', delay: .2 });
+gsap.fromTo('.ln', { yPercent: 110 }, { yPercent: 0, duration: 1.2, stagger: .08, ease: 'power4.out', delay: .6 });
+const ring = document.getElementById('ring'), countEl = document.getElementById('count');
+function tick() {
+  if (!dragging && !lbOpen) target -= .015;
+  rot = lerp(rot, target, .08);
+  const K = innerWidth < 760 ? 820 : Math.min(1000, innerWidth * .7);   // phones: wider spacing so ~3 posters show   // recomputed every frame so resizing just works
+  let best = 0, bestD = 1e9;
+  items.forEach((it, i) => {
+    let a = ((it.a + rot) % 360 + 540) % 360 - 180;        // -180..180, 0 = straight ahead
+    const vis = Math.abs(a) < 42;
+    it.el.style.visibility = vis ? 'visible' : 'hidden';
+    if (!vis) return;
+    const k = clamp(intro.k * 1.6 - Math.abs(a) / 42 * .6);
+    const enter = (1 - k) * 40 * Math.sign(a || 1);
+    // panoramic projection: as if hung on the inside of a cylinder around the viewer
+    const ar = (a + enter) * Math.PI / 180, sc = 1 / Math.cos(ar);
+    // v10: the edges lean in much harder — steeper turn, stronger perspective, a slight tilt and drop
+    const ae = a + enter, edge = Math.pow(Math.abs(ae) / 42, 1.4);
+    const turn = clamp(-ae * (1.4 + edge * 1.4), -78, 78);
+    it.el.style.transform = `translateX(${K * Math.tan(ar)}px) translateY(${edge * 46}px) scale(${Math.pow(sc, 1.6)}) perspective(560px) rotateY(${turn}deg) rotateZ(${ae * .14}deg)`;
+    it.el.style.zIndex = Math.round(Math.abs(a));
+    it.el.style.opacity = k * clamp((42 - Math.abs(a)) / 10);
+    if (Math.abs(a) < bestD) { bestD = Math.abs(a); best = i; }
+  });
+  countEl.textContent = `${String(best + 1).padStart(3, '0')} / ${String(N).padStart(3, '0')}`;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* lightbox */
+const lb = document.getElementById('lb'); let lbOpen = false;
+function openLb(d) {
+  paint(document.getElementById('lbCanvas'), d.d);
+  document.getElementById('lbInfo').innerHTML = `<em>${d.t}</em><dl><dt>Designer</dt><dd>${d.by}</dd><dt>City</dt><dd>${d.city}</dd><dt>Year</dt><dd>${d.y}</dd><dt>Print</dt><dd>${d.tech}</dd><dt>Wall №</dt><dd>${String(d.n).padStart(4, '0')}</dd></dl><q>A poster has three seconds to stop a stranger. This one was printed for exactly that.</q>`;
+  lb.classList.add('on'); lbOpen = true;
+}
+function closeLb() { lb.classList.remove('on'); lbOpen = false; }
+lb.addEventListener('click', e => { if (e.target === lb || e.target.id === 'lbClose') closeLb(); });
+</script>
+</body>
+</html>
